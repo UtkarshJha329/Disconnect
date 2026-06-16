@@ -14,7 +14,7 @@ type World struct {
 	Children map[Entity][]*Entity
 	Alive    map[Entity]bool
 
-	LevelColliders []AABB
+	LevelColliders []*AABB
 
 	Scene Scene
 }
@@ -31,11 +31,11 @@ func NewWorld() *World {
 		Children: make(map[Entity][]*Entity),
 		Alive:    make(map[Entity]bool),
 
-		LevelColliders: make([]AABB, 0),
+		LevelColliders: make([]*AABB, 0),
 	}
 
 	world.Scene = Scene{
-		Root:                 NewEntity(&world),
+		Root:                 world.NewEntity(),
 		world:                &world,
 		EntitiesToDrawSorted: make([]Entity, 0),
 	}
@@ -61,7 +61,7 @@ func (e Entity) CalculateHierarchyWorldTransform(world *World, parentWorldTransf
 	world.Transforms[e].WorldTransformMatrix = local
 }
 
-func NewEntity(world *World) Entity {
+func (world *World) NewEntity() Entity {
 	e := nextEntity
 	world.Alive[e] = true
 	world.Transforms[e] = &Transform{
@@ -74,20 +74,20 @@ func NewEntity(world *World) Entity {
 	return e
 }
 
-func CreateEntityInScene(scene *Scene, world *World) Entity {
-	e := NewEntity(world)
+func (world *World) CreateEntityInScene(scene *Scene) Entity {
+	e := world.NewEntity()
 	world.MakeEntityAChildOfB(e, scene.Root)
 	return e
 }
 
-func CreateEntityInSceneWithParent(scene *Scene, world *World, parentEntity Entity) Entity {
-	e := NewEntity(world)
+func (world *World) CreateEntityInSceneWithParent(scene *Scene, parentEntity Entity) Entity {
+	e := world.NewEntity()
 	world.MakeEntityAChildOfB(e, parentEntity)
 	return e
 }
 
-func CreateSpriteFromFileInScene(scene *Scene, world *World, src string) Entity {
-	e := CreateEntityInScene(scene, world)
+func (world *World) CreateSpriteFromFileInScene(scene *Scene, src string) Entity {
+	e := world.CreateEntityInScene(scene)
 
 	world.Sprites[e] = &Sprite{}
 	world.Sprites[e].SetImageFromFile(src)
@@ -95,11 +95,21 @@ func CreateSpriteFromFileInScene(scene *Scene, world *World, src string) Entity 
 	return e
 }
 
-func CreateSpriteFromFileInSceneWithParentEntity(scene *Scene, world *World, src string, parentEntity Entity) Entity {
-	e := CreateEntityInSceneWithParent(scene, world, parentEntity)
+func (world *World) CreateSpriteFromFileInSceneWithParentEntity(scene *Scene, src string, parentEntity Entity) Entity {
+	e := world.CreateEntityInSceneWithParent(scene, parentEntity)
 
 	world.Sprites[e] = &Sprite{}
 	world.Sprites[e].SetImageFromFile(src)
 
 	return e
+}
+
+func (world *World) CreateNewLevelCollider(X, Y, Width, Height float64) int {
+	world.LevelColliders = append(world.LevelColliders, &AABB{
+		X:      X,
+		Y:      Y,
+		Width:  Width,
+		Height: Height,
+	})
+	return len(world.LevelColliders) - 1
 }

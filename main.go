@@ -2,8 +2,10 @@ package main
 
 import (
 	"CookieCrumbles/Engine"
+	"fmt"
 	"image/color"
 	"log"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -90,7 +92,7 @@ func main() {
 
 	floatInterpolationSystem.InitWithInterpolationsInPool("Float Interpolation System", 10)
 
-	playerEntity = Engine.CreateSpriteFromFileInScene(&world.Scene, world, "Assets/player/idle/00.png")
+	playerEntity = world.CreateSpriteFromFileInScene(&world.Scene, "Assets/player/idle/00.png")
 	world.Transforms[playerEntity].Scale = Engine.Vector2{X: 4.0, Y: 4.0}
 	world.Transforms[playerEntity].Position = Engine.Vector3{X: float64(screenWidth) / 2.0, Y: float64(screenHeight) / 2.0, Z: 100}
 
@@ -121,7 +123,7 @@ func main() {
 		},
 	}
 
-	gunEntity := Engine.CreateSpriteFromFileInSceneWithParentEntity(&world.Scene, world, "Assets/gun.png", playerEntity)
+	gunEntity := world.CreateSpriteFromFileInSceneWithParentEntity(&world.Scene, "Assets/gun.png", playerEntity)
 	world.Transforms[gunEntity].Scale = Engine.Vector2{X: 1.0, Y: 1.0}
 	world.Transforms[gunEntity].Position = Engine.Vector3{X: 6.0, Y: 0.0, Z: 200}
 
@@ -140,30 +142,23 @@ func main() {
 	// 	func() { fmt.Println("Finished rotating sprite.") },
 	// )
 
-	floor := Engine.AABB{
-		X:      0,
-		Y:      450,
-		Width:  640,
-		Height: 32,
-	}
+	world.CreateNewLevelCollider(0, 450, 640, 32)
+	world.CreateNewLevelCollider(-16, 0, 16, 480)
+	world.CreateNewLevelCollider(639, 0, 16, 480)
+	world.CreateNewLevelCollider(100, 380, 120, 20)
+	platform2Index := world.CreateNewLevelCollider(300, 320, 120, 20)
+	platform2XFinal := 500.0
 
-	leftWall := Engine.AABB{
-		X:      -16,
-		Y:      0,
-		Width:  16,
-		Height: 480,
-	}
-
-	rightWall := Engine.AABB{
-		X:      639,
-		Y:      0,
-		Width:  16,
-		Height: 480,
-	}
-
-	world.LevelColliders = append(world.LevelColliders, floor)
-	world.LevelColliders = append(world.LevelColliders, leftWall)
-	world.LevelColliders = append(world.LevelColliders, rightWall)
+	floatInterpolationSystem.CreateNewInterpolation(
+		world.LevelColliders[platform2Index].X,
+		&world.LevelColliders[platform2Index].X,
+		&platform2XFinal,
+		time.Duration(2.0*float64(time.Second)),
+		false,
+		true,
+		Engine.LinearInterpolationFloat,
+		func() { fmt.Println("Finished interpolating platform position.") },
+	)
 
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)

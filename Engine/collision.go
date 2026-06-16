@@ -30,7 +30,7 @@ func ResolveHorizontal(
 
 	for _, wall := range world.LevelColliders {
 
-		if !AABBOverlap(player, wall) {
+		if !AABBOverlap(player, *wall) {
 			continue
 		}
 
@@ -66,7 +66,7 @@ func ResolveVertical(
 
 	for _, floor := range world.LevelColliders {
 
-		if !AABBOverlap(player, floor) {
+		if !AABBOverlap(player, *floor) {
 			continue
 		}
 

@@ -17,6 +17,8 @@ type Interpolation[T any] struct {
 	InterpolationType int
 	Loop              bool
 
+	inverseInterpolationParameter bool
+
 	InterpolateStartValue T
 	InterpolateValue      *T
 	InterpolateToValue    *T
@@ -27,6 +29,10 @@ type Interpolation[T any] struct {
 }
 
 func (interpolation *Interpolation[T]) GetInterpolationParameter() float64 {
+	t := float64(float64(interpolation.interpolationTimerPoolItem.Item.TimePassedSinceStart()) / float64(interpolation.interpolationTimerPoolItem.Item.TimerTotalDuration))
+	if interpolation.inverseInterpolationParameter {
+		return 1.0 - t
+	}
 	return float64(float64(interpolation.interpolationTimerPoolItem.Item.TimePassedSinceStart()) / float64(interpolation.interpolationTimerPoolItem.Item.TimerTotalDuration))
 }
 
@@ -45,7 +51,7 @@ func (interpolationSystem *InterpolationSystem[T]) InitWithInterpolationsInPool(
 	interpolationSystem.TimerSystem.InitWithTimers(interpolationSystemName+"'s Timer System", totalNumInterpolationsToCreateInPool)
 }
 
-func (interpolationSystem *InterpolationSystem[T]) CreateNewInterpolation(interpolateStartValue T, interpolateValue *T, interpolateToValue *T, interpolateInTime time.Duration, shouldLoop bool, InterpolationCalculator func(t *float64, startValue T, currentValue *T, futureValue *T), OnFinishInterpolation func()) *PoolItem[Interpolation[T]] {
+func (interpolationSystem *InterpolationSystem[T]) CreateNewInterpolation(interpolateStartValue T, interpolateValue *T, interpolateToValue *T, interpolateInTime time.Duration, shouldLoop bool, pingPong bool, InterpolationCalculator func(t *float64, startValue T, currentValue *T, futureValue *T), OnFinishInterpolation func()) *PoolItem[Interpolation[T]] {
 
 	curInterpolationPoolItem := interpolationSystem.InterpolationsPool.GetAnUnusedItemFromPool()
 
@@ -53,9 +59,16 @@ func (interpolationSystem *InterpolationSystem[T]) CreateNewInterpolation(interp
 	curInterpolationPoolItem.Item.InterpolateValue = interpolateValue
 	curInterpolationPoolItem.Item.InterpolateToValue = interpolateToValue
 
+	curInterpolationPoolItem.Item.inverseInterpolationParameter = false
+
 	curInterpolationPoolItem.Item.InterpolationCalculator = InterpolationCalculator
 
-	curInterpolationPoolItem.Item.interpolationTimerPoolItem = interpolationSystem.TimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(interpolateInTime, shouldLoop, OnFinishInterpolation)
+	curInterpolationPoolItem.Item.interpolationTimerPoolItem = interpolationSystem.TimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(interpolateInTime, shouldLoop || pingPong, func() {
+		if pingPong {
+			curInterpolationPoolItem.Item.inverseInterpolationParameter = !curInterpolationPoolItem.Item.inverseInterpolationParameter
+		}
+		OnFinishInterpolation()
+	})
 
 	return curInterpolationPoolItem
 }
