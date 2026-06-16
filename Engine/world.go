@@ -5,12 +5,16 @@ import (
 )
 
 type World struct {
-	Names      map[Entity]*string
-	Transforms map[Entity]*Transform
-	Sprites    map[Entity]*Sprite
-	Parents    map[Entity]*Entity
-	Children   map[Entity][]*Entity
-	Alive      map[Entity]bool
+	Names                map[Entity]*string
+	Transforms           map[Entity]*Transform
+	Sprites              map[Entity]*Sprite
+	CharacterControllers map[Entity]*CharacterController
+
+	Parents  map[Entity]*Entity
+	Children map[Entity][]*Entity
+	Alive    map[Entity]bool
+
+	LevelColliders []AABB
 
 	Scene Scene
 }
@@ -18,12 +22,16 @@ type World struct {
 func NewWorld() *World {
 
 	world := World{
-		Names:      make(map[Entity]*string),
-		Transforms: make(map[Entity]*Transform),
-		Sprites:    make(map[Entity]*Sprite),
-		Parents:    make(map[Entity]*Entity),
-		Children:   make(map[Entity][]*Entity),
-		Alive:      make(map[Entity]bool),
+		Names:                make(map[Entity]*string),
+		Transforms:           make(map[Entity]*Transform),
+		Sprites:              make(map[Entity]*Sprite),
+		CharacterControllers: make(map[Entity]*CharacterController),
+
+		Parents:  make(map[Entity]*Entity),
+		Children: make(map[Entity][]*Entity),
+		Alive:    make(map[Entity]bool),
+
+		LevelColliders: make([]AABB, 0),
 	}
 
 	world.Scene = Scene{
@@ -41,11 +49,6 @@ func (world *World) MakeEntityAChildOfB(a, b Entity) {
 }
 
 func (e Entity) CalculateHierarchyWorldTransform(world *World, parentWorldTransform ebiten.GeoM) {
-	// totalWorldTransform := parentWorldTransform
-	// totalWorldTransform.Concat(world.Transforms[e].CalculateLocalMatrix())
-
-	// world.Transforms[e].WorldTransformMatrix = totalWorldTransform
-
 	local := world.Transforms[e].CalculateLocalMatrix()
 
 	if parentEntity, ok := world.Parents[e]; ok {
@@ -56,23 +59,6 @@ func (e Entity) CalculateHierarchyWorldTransform(world *World, parentWorldTransf
 	local.Concat(parentWorldTransform)
 
 	world.Transforms[e].WorldTransformMatrix = local
-
-	// fmt.Print("Entity ")
-	// fmt.Print(e)
-	// fmt.Println(" world transform matrix: ")
-	// fmt.Println(world.Transforms[e].WorldTransformMatrix)
-
-	// pivotX, pivotY := world.Transforms[e].WorldTransformMatrix.Apply(
-	// 	world.Transforms[e].Pivot.X,
-	// 	world.Transforms[e].Pivot.Y,
-	// )
-
-	// fmt.Printf(
-	// 	"Entity %d pivot world position = (%f, %f)\n",
-	// 	e,
-	// 	pivotX,
-	// 	pivotY,
-	// )
 }
 
 func NewEntity(world *World) Entity {
