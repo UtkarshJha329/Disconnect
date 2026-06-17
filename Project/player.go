@@ -20,7 +20,11 @@ var oldFrameGrounded bool = false
 
 var playerWallSlideSpeed float64 = 10.0
 var playerWallClimbSpeed float64 = 100.0
-var playerWallJumpSpeed float64 = 800.0
+var playerWallJumpSpeedX float64 = 400.0
+var playerWallJumpSpeedY float64 = 600.0
+var wallJumpLockInputForSeconds time.Duration = time.Duration(0.25 * float64(time.Second))
+var wallJumpInputLockTimerSystem Engine.TimerSystem
+var wallJumpInputLock bool = false
 
 func PlayerInitFunc(world *Engine.World) {
 
@@ -28,6 +32,7 @@ func PlayerInitFunc(world *Engine.World) {
 
 	jumpBufferTimerSystem.InitWithTimers("Jump Buffer Timer System", 4)
 	coyeteBufferTimerSystem.InitWithTimers("Coyete Buffer Timer System", 1)
+	wallJumpInputLockTimerSystem.InitWithTimers("Wall Jump Input Lock Timer System", 2)
 
 	playerEntity = world.CreateSpriteFromFileInScene(&world.Scene, "Assets/player/idle/00.png")
 	world.Transforms[playerEntity].Scale = Engine.Vector2{X: 4.0, Y: 4.0}
@@ -85,15 +90,18 @@ func PlayerInitFunc(world *Engine.World) {
 func PlayerUpdateFunc(world *Engine.World, dt float64) {
 	jumpBufferTimerSystem.UpdateAllTimerDeltasAndStates()
 	coyeteBufferTimerSystem.UpdateAllTimerDeltasAndStates()
+	wallJumpInputLockTimerSystem.UpdateAllTimerDeltasAndStates()
 
 	playerCharacterController := world.CharacterControllers[playerEntity]
 
-	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
-		playerCharacterController.Velocity.X = -playerCharacterController.MoveSpeed
-	} else if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
-		playerCharacterController.Velocity.X = playerCharacterController.MoveSpeed
-	} else {
-		playerCharacterController.Velocity.X = 0
+	if !wallJumpInputLock {
+		if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+			playerCharacterController.Velocity.X = -playerCharacterController.MoveSpeed
+		} else if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+			playerCharacterController.Velocity.X = playerCharacterController.MoveSpeed
+		} else {
+			playerCharacterController.Velocity.X = 0
+		}
 	}
 
 	dir := math.Copysign(1.0, playerCharacterController.Velocity.X)
@@ -125,14 +133,32 @@ func PlayerUpdateFunc(world *Engine.World, dt float64) {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && playerCharacterController.TouchingWall(-1, playerEntity, world) {
 
-		playerCharacterController.Velocity.X = playerWallJumpSpeed
-		playerCharacterController.Velocity.Y = -playerCharacterController.JumpSpeed
+		playerCharacterController.Velocity.X = playerWallJumpSpeedX
+		playerCharacterController.Velocity.Y = -playerWallJumpSpeedY
+
+		wallJumpInputLock = true
+		wallJumpInputLockTimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(
+			wallJumpLockInputForSeconds,
+			false,
+			func() {
+				wallJumpInputLock = false
+			},
+		)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && playerCharacterController.TouchingWall(1, playerEntity, world) {
 
-		playerCharacterController.Velocity.X = -playerWallJumpSpeed
-		playerCharacterController.Velocity.Y = -playerCharacterController.JumpSpeed
+		playerCharacterController.Velocity.X = -playerWallJumpSpeedX
+		playerCharacterController.Velocity.Y = -playerWallJumpSpeedY
+
+		wallJumpInputLock = true
+		wallJumpInputLockTimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(
+			wallJumpLockInputForSeconds,
+			false,
+			func() {
+				wallJumpInputLock = false
+			},
+		)
 	}
 
 	if (playerCharacterController.TouchingWall(1, playerEntity, world) || playerCharacterController.TouchingWall(-1, playerEntity, world)) &&
