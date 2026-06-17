@@ -9,12 +9,11 @@ type World struct {
 	Transforms           map[Entity]*Transform
 	Sprites              map[Entity]*Sprite
 	CharacterControllers map[Entity]*CharacterController
+	LevelColliders       map[Entity]*AABB
 
 	Parents  map[Entity]*Entity
 	Children map[Entity][]*Entity
 	Alive    map[Entity]bool
-
-	LevelColliders []*AABB
 
 	Scene Scene
 }
@@ -26,12 +25,11 @@ func NewWorld() *World {
 		Transforms:           make(map[Entity]*Transform),
 		Sprites:              make(map[Entity]*Sprite),
 		CharacterControllers: make(map[Entity]*CharacterController),
+		LevelColliders:       make(map[Entity]*AABB),
 
 		Parents:  make(map[Entity]*Entity),
 		Children: make(map[Entity][]*Entity),
 		Alive:    make(map[Entity]bool),
-
-		LevelColliders: make([]*AABB, 0),
 	}
 
 	world.Scene = Scene{
@@ -104,12 +102,14 @@ func (world *World) CreateSpriteFromFileInSceneWithParentEntity(scene *Scene, sr
 	return e
 }
 
-func (world *World) CreateNewLevelCollider(X, Y, Width, Height float64) int {
-	world.LevelColliders = append(world.LevelColliders, &AABB{
+func (world *World) CreateNewLevelColliderInScene(scene *Scene, X, Y, Width, Height float64, Layer uint) Entity {
+	e := world.CreateEntityInScene(scene)
+	world.LevelColliders[e] = &AABB{
 		X:      X,
 		Y:      Y,
 		Width:  Width,
 		Height: Height,
-	})
-	return len(world.LevelColliders) - 1
+		Layer:  Layer,
+	}
+	return e
 }

@@ -6,41 +6,136 @@ type CharacterController struct {
 	Width  float64
 	Height float64
 
-	Grounded bool
+	Grounded                  bool
+	CollideWithOneWayPlatform bool
 
 	Gravity   float64
 	JumpSpeed float64
 	MoveSpeed float64
+
+	oldBottom float64
 }
 
-func UpdateCharacter(
+func (cc *CharacterController) UpdateCharacter(
 	world *World,
-	controller *CharacterController,
 	transform *Transform,
 	dt float64,
 ) {
 
-	gravity := controller.Gravity
+	gravity := cc.Gravity
 
-	if controller.Velocity.Y > 0 {
+	if cc.Velocity.Y > 0 {
 		gravity *= 1.8
 	}
 
-	controller.Velocity.Y += gravity * dt
+	cc.Velocity.Y += gravity * dt
 
-	transform.Position.X += controller.Velocity.X * dt
+	transform.Position.X += cc.Velocity.X * dt
 
-	ResolveHorizontal(
+	cc.ResolveHorizontal(
 		world,
-		controller,
 		transform,
 	)
 
-	transform.Position.Y += controller.Velocity.Y * dt
+	cc.oldBottom = transform.Position.Y + (cc.Height / 2.0)
 
-	ResolveVertical(
+	transform.Position.Y += cc.Velocity.Y * dt
+
+	cc.ResolveVertical(
 		world,
-		controller,
 		transform,
 	)
+}
+
+func (cc *CharacterController) ResolveHorizontal(
+	world *World,
+	transform *Transform,
+) {
+
+	playerCollider := AABB{
+		X:      transform.Position.X - (cc.Width / 2.0),
+		Y:      transform.Position.Y - (cc.Height / 2.0),
+		Width:  cc.Width,
+		Height: cc.Height,
+	}
+
+	for _, collider := range world.LevelColliders {
+
+		if collider.Layer == DEAFULT {
+
+			if !AABBOverlap(playerCollider, *collider) {
+				continue
+			}
+
+			if cc.Velocity.X > 0 {
+
+				transform.Position.X = collider.X - (cc.Width / 2.0)
+
+			} else if cc.Velocity.X < 0 {
+
+				transform.Position.X = collider.X + collider.Width + (cc.Width / 2.0)
+			}
+
+			cc.Velocity.X = 0
+
+			playerCollider.X = transform.Position.X
+		}
+	}
+}
+
+func (cc *CharacterController) ResolveVertical(
+	world *World,
+	transform *Transform,
+) {
+
+	cc.Grounded = false
+
+	playerCollider := AABB{
+		X:      transform.Position.X - (cc.Width / 2.0),
+		Y:      transform.Position.Y - (cc.Height / 2.0),
+		Width:  cc.Width,
+		Height: cc.Height,
+	}
+
+	for _, collider := range world.LevelColliders {
+
+		if collider.Layer == DEAFULT {
+			if !AABBOverlap(playerCollider, *collider) {
+				continue
+			}
+
+			if cc.Velocity.Y > 0 {
+
+				transform.Position.Y = collider.Y - (cc.Height / 2.0)
+
+				cc.Grounded = true
+
+			} else if cc.Velocity.Y < 0 {
+
+				transform.Position.Y = collider.Y + collider.Height + (cc.Height / 2.0)
+			}
+
+			cc.Velocity.Y = 0
+
+			playerCollider.Y = transform.Position.Y
+
+		} else if collider.Layer == ONE_WAY_PLATFORMS && cc.CollideWithOneWayPlatform {
+
+			if playerCollider.Right() > collider.Left() &&
+				playerCollider.Left() < collider.Right() {
+
+				if cc.Velocity.Y > 0 &&
+					cc.oldBottom <= collider.Top() &&
+					playerCollider.Bottom() >= collider.Top() {
+
+					transform.Position.Y = collider.Top() - (cc.Height / 2.0)
+
+					cc.Velocity.Y = 0
+					cc.Grounded = true
+
+					playerCollider.Y = transform.Position.Y - (cc.Height / 2.0)
+				}
+			}
+		}
+	}
 }

@@ -43,7 +43,15 @@ func (g *Game) Update() error {
 		playerCharacterController.Velocity.Y *= 0.5
 	}
 
-	Engine.UpdateCharacter(world, playerCharacterController, world.Transforms[playerEntity], 1.0/60.0)
+	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
+		playerCharacterController.CollideWithOneWayPlatform = false
+	}
+	if inpututil.IsKeyJustReleased(ebiten.KeyArrowDown) {
+		playerCharacterController.CollideWithOneWayPlatform = true
+	}
+
+	dt := 1.0 / 60.0
+	playerCharacterController.UpdateCharacter(world, world.Transforms[playerEntity], dt)
 
 	return nil
 }
@@ -115,7 +123,8 @@ func main() {
 		MoveSpeed: 500,
 		JumpSpeed: 500,
 
-		Grounded: false,
+		Grounded:                  false,
+		CollideWithOneWayPlatform: true,
 
 		Velocity: Engine.Vector2{
 			X: 0,
@@ -142,11 +151,11 @@ func main() {
 	// 	func() { fmt.Println("Finished rotating sprite.") },
 	// )
 
-	world.CreateNewLevelCollider(0, 450, 640, 32)
-	world.CreateNewLevelCollider(-16, 0, 16, 480)
-	world.CreateNewLevelCollider(639, 0, 16, 480)
-	world.CreateNewLevelCollider(100, 380, 120, 20)
-	platform2Index := world.CreateNewLevelCollider(300, 320, 120, 20)
+	world.CreateNewLevelColliderInScene(&world.Scene, 0, 450, 640, 32, Engine.DEAFULT)
+	world.CreateNewLevelColliderInScene(&world.Scene, -16, 0, 16, 480, Engine.DEAFULT)
+	world.CreateNewLevelColliderInScene(&world.Scene, 639, 0, 16, 480, Engine.DEAFULT)
+	world.CreateNewLevelColliderInScene(&world.Scene, 100, 380, 120, 20, Engine.DEAFULT)
+	platform2Index := world.CreateNewLevelColliderInScene(&world.Scene, 300, 320, 120, 20, Engine.DEAFULT)
 	platform2XFinal := 500.0
 
 	floatInterpolationSystem.CreateNewInterpolation(
@@ -159,6 +168,8 @@ func main() {
 		Engine.LinearInterpolationFloat,
 		func() { fmt.Println("Finished interpolating platform position.") },
 	)
+
+	world.CreateNewLevelColliderInScene(&world.Scene, 100, 280, 120, 20, Engine.ONE_WAY_PLATFORMS)
 
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
