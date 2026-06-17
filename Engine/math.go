@@ -35,6 +35,10 @@ func (a *Vector2) MultiplyFloat(b float64) Vector2 {
 	return Vector2{a.X * b, a.Y * b}
 }
 
+func (a *Vector2) DivideFloat(b float64) Vector2 {
+	return Vector2{a.X / b, a.Y / b}
+}
+
 type Vector3 struct {
 	X float64
 	Y float64
@@ -63,4 +67,24 @@ func (a *Vector3) Dot(b *Vector3) float64 {
 
 func (a *Vector3) MultiplyFloat(b float64) Vector3 {
 	return Vector3{a.X * b, a.Y * b, a.Z * b}
+}
+
+func (a *Vector3) DivideFloat(b float64) Vector3 {
+	return Vector3{a.X / b, a.Y / b, a.Z / b}
+}
+
+func (a *Vector3) AddVector2(b *Vector2) Vector3 {
+	return Vector3{a.X + b.X, a.Y + b.Y, a.Z}
+}
+
+func (a *Vector3) SubtractVector2(b *Vector2) Vector3 {
+	return Vector3{a.X - b.X, a.Y - b.Y, a.Z}
+}
+
+func (a *Vector3) MultiplyVector2(b *Vector2) Vector3 {
+	return Vector3{a.X * b.X, a.Y * b.Y, a.Z}
+}
+
+func (a *Vector3) DivideVector2(b *Vector2) Vector3 {
+	return Vector3{a.X / b.X, a.Y / b.Y, a.Z}
 }

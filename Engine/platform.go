@@ -1,0 +1,125 @@
+package Engine
+
+import (
+	"fmt"
+	"math"
+	"slices"
+)
+
+type Platform struct {
+	AABB       *AABB
+	Velocity   Vector2
+	Remainder  Vector2
+	Collidable bool
+}
+
+func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World) {
+	platform.Remainder.X += x
+	platform.Remainder.Y += y
+
+	moveX := math.Round(platform.Remainder.X)
+	moveY := math.Round(platform.Remainder.Y)
+
+	if moveX != 0.0 || moveY != 0.0 {
+		ridingCCs := platform.GetAllRidingCharacterControllers(platformEntity, world)
+
+		platform.Collidable = false
+
+		if moveX != 0 {
+
+			platform.Remainder.X -= moveX
+			platform.AABB.X += moveX
+
+			if moveX > 0 {
+				for e, cc := range world.CharacterControllers {
+					ccAABB := cc.GetAABB(e, world)
+					if AABBOverlap(*ccAABB, *platform.AABB) {
+						cc.MoveHorizontal(platform.AABB.Right()-ccAABB.Left(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
+							fmt.Println("Squished.")
+						})
+					} else if slices.Contains(ridingCCs, e) {
+						cc.MoveHorizontal(moveX, world.Transforms[e], world, nil)
+					}
+				}
+			} else {
+				for e, cc := range world.CharacterControllers {
+					ccAABB := cc.GetAABB(e, world)
+					if AABBOverlap(*ccAABB, *platform.AABB) {
+						cc.MoveHorizontal(platform.AABB.Left()-ccAABB.Right(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
+							fmt.Println("Squished.")
+						})
+					} else if slices.Contains(ridingCCs, e) {
+						cc.MoveHorizontal(moveX, world.Transforms[e], world, nil)
+					}
+				}
+			}
+		}
+
+		if moveY != 0 {
+
+			platform.Remainder.Y -= moveY
+			platform.AABB.Y += moveY
+
+			if moveY > 0 {
+				if platform.AABB.Layer != ONE_WAY_PLATFORMS {
+					for e, cc := range world.CharacterControllers {
+						ccAABB := cc.GetAABB(e, world)
+						if AABBOverlap(*ccAABB, *platform.AABB) {
+							cc.MoveVertical(platform.AABB.Bottom()-ccAABB.Top(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
+								fmt.Println("Squished.")
+							})
+						} else if slices.Contains(ridingCCs, e) {
+							cc.MoveVertical(moveY, world.Transforms[e], world, nil)
+						}
+					}
+				} else {
+					for e, cc := range world.CharacterControllers {
+						if slices.Contains(ridingCCs, e) {
+							cc.MoveVertical(moveY, world.Transforms[e], world, nil)
+						}
+					}
+				}
+			} else {
+				for e, cc := range world.CharacterControllers {
+					if platform.AABB.Layer == ONE_WAY_PLATFORMS {
+
+						if cc.CollideWithOneWayPlatform {
+
+							if slices.Contains(ridingCCs, e) {
+								cc.MoveVertical(moveY, world.Transforms[e], world, nil)
+							}
+						}
+
+					} else {
+						ccAABB := cc.GetAABB(e, world)
+						if AABBOverlap(*ccAABB, *platform.AABB) {
+							cc.MoveVertical(platform.AABB.Top()-ccAABB.Bottom(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
+								fmt.Println("Squished.")
+							})
+						} else if slices.Contains(ridingCCs, e) {
+							cc.MoveVertical(moveY, world.Transforms[e], world, nil)
+						}
+
+					}
+				}
+			}
+		}
+
+		platform.Collidable = true
+	}
+}
+
+func (platform *Platform) GetAllRidingCharacterControllers(platformEntity Entity, world *World) []Entity {
+	ridingCharacterControllers := make([]Entity, 0)
+	for e, cc := range world.CharacterControllers {
+		ccAABB := cc.GetAABB(e, world)
+		if math.Abs(ccAABB.Bottom()-platform.AABB.Top()) <= 1 &&
+			ccAABB.Right() > platform.AABB.Left() &&
+			ccAABB.Left() < platform.AABB.Right() {
+
+			ridingCharacterControllers = append(ridingCharacterControllers, e)
+
+		}
+	}
+	return ridingCharacterControllers
+}

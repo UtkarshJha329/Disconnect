@@ -43,6 +43,10 @@ func (pool *Pool[T]) GetAnUnusedItemFromPool() *PoolItem[T] {
 	return pool.Items[pool.CurNumAliveItemsInPool-1]
 }
 
+func (pool *Pool[T]) IsPoolFilled() bool {
+	return pool.CurNumAliveItemsInPool == pool.TotalNumItemsInPool
+}
+
 func (pool *Pool[T]) KillItemInPool(poolItemToKill *PoolItem[T]) {
 
 	if pool.CurNumAliveItemsInPool == 1 || poolItemToKill.ItemIndex == pool.CurNumAliveItemsInPool-1 {

@@ -4,18 +4,23 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+type EntityInitFunc func(*World)
+type EntityUpdateFunc func(*World, float64)
+
 type World struct {
 	Names                map[Entity]*string
 	Transforms           map[Entity]*Transform
 	Sprites              map[Entity]*Sprite
 	CharacterControllers map[Entity]*CharacterController
-	LevelColliders       map[Entity]*AABB
+	Platforms            map[Entity]*Platform
 
 	Parents  map[Entity]*Entity
 	Children map[Entity][]*Entity
 	Alive    map[Entity]bool
 
-	Scene Scene
+	Scene             Scene
+	EntityInitfuncs   []EntityInitFunc
+	EntityUpdateFuncs []EntityUpdateFunc
 }
 
 func NewWorld() *World {
@@ -25,7 +30,7 @@ func NewWorld() *World {
 		Transforms:           make(map[Entity]*Transform),
 		Sprites:              make(map[Entity]*Sprite),
 		CharacterControllers: make(map[Entity]*CharacterController),
-		LevelColliders:       make(map[Entity]*AABB),
+		Platforms:            make(map[Entity]*Platform),
 
 		Parents:  make(map[Entity]*Entity),
 		Children: make(map[Entity][]*Entity),
@@ -104,12 +109,16 @@ func (world *World) CreateSpriteFromFileInSceneWithParentEntity(scene *Scene, sr
 
 func (world *World) CreateNewLevelColliderInScene(scene *Scene, X, Y, Width, Height float64, Layer uint) Entity {
 	e := world.CreateEntityInScene(scene)
-	world.LevelColliders[e] = &AABB{
-		X:      X,
-		Y:      Y,
-		Width:  Width,
-		Height: Height,
-		Layer:  Layer,
+	world.Platforms[e] = &Platform{
+		AABB: &AABB{
+			X:      X,
+			Y:      Y,
+			Width:  Width,
+			Height: Height,
+			Layer:  Layer,
+		},
+		// OldPosition: Vector2{},
+		Collidable: true,
 	}
 	return e
 }

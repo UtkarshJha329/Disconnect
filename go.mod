@@ -1,4 +1,4 @@
-module CookieCrumbles
+module Disconnect
 
 go 1.25.1
 

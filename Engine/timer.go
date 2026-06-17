@@ -100,6 +100,20 @@ func (timerSystem *TimerSystem) UpdateAllTimerDeltasAndStates() {
 	})
 }
 
+func (timerSystem *TimerSystem) TimerSystemPoolHasRunningTimers() bool {
+	return timerSystem.timerPool.CurNumAliveItemsInPool > 0
+}
+
+func (timerSystem *TimerSystem) IsTimerSystemPoolFilled() bool {
+	return timerSystem.timerPool.IsPoolFilled()
+}
+
 func (timerSystem *TimerSystem) KillTimer(timerPoolItem *PoolItem[Timer]) {
 	timerSystem.timerPool.KillItemInPool(timerPoolItem)
+}
+
+func (timerSystem *TimerSystem) ForceEndAllTimersForNextUpdate() {
+	timerSystem.timerPool.PerformOperationOnAlivePoolItems(func(curTimer *PoolItem[Timer]) {
+		curTimer.Item.ForceEndCurrentLoopOfTimerForNextUpdate()
+	})
 }
