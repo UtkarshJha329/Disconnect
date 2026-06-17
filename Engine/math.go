@@ -39,6 +39,11 @@ func (a *Vector2) DivideFloat(b float64) Vector2 {
 	return Vector2{a.X / b, a.Y / b}
 }
 
+func (a *Vector2) Normalize() Vector2 {
+	normalizingFactor := math.Sqrt(math.Pow(a.X, 2) + math.Pow(a.Y, 2))
+	return a.DivideFloat(normalizingFactor)
+}
+
 type Vector3 struct {
 	X float64
 	Y float64
