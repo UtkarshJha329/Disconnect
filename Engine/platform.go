@@ -3,7 +3,6 @@ package Engine
 import (
 	"fmt"
 	"math"
-	"slices"
 )
 
 type Platform struct {
@@ -37,7 +36,7 @@ func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World
 						cc.MoveHorizontal(platform.AABB.Right()-ccAABB.Left(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
 							fmt.Println("Squished.")
 						})
-					} else if slices.Contains(ridingCCs, e) {
+					} else if _, ok := ridingCCs[e]; ok {
 						cc.MoveHorizontal(moveX, world.Transforms[e], world, nil)
 					}
 				}
@@ -48,7 +47,7 @@ func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World
 						cc.MoveHorizontal(platform.AABB.Left()-ccAABB.Right(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
 							fmt.Println("Squished.")
 						})
-					} else if slices.Contains(ridingCCs, e) {
+					} else if _, ok := ridingCCs[e]; ok {
 						cc.MoveHorizontal(moveX, world.Transforms[e], world, nil)
 					}
 				}
@@ -65,17 +64,17 @@ func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World
 					for e, cc := range world.CharacterControllers {
 						ccAABB := cc.GetAABB(e, world)
 						if AABBOverlap(*ccAABB, *platform.AABB) {
-							cc.MoveVertical(platform.AABB.Bottom()-ccAABB.Top(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
+							cc.MoveVertical(e, platform.AABB.Bottom()-ccAABB.Top(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
 								fmt.Println("Squished.")
 							})
-						} else if slices.Contains(ridingCCs, e) {
-							cc.MoveVertical(moveY, world.Transforms[e], world, nil)
+						} else if _, ok := ridingCCs[e]; ok {
+							cc.MoveVertical(e, moveY, world.Transforms[e], world, nil)
 						}
 					}
 				} else {
 					for e, cc := range world.CharacterControllers {
-						if slices.Contains(ridingCCs, e) {
-							cc.MoveVertical(moveY, world.Transforms[e], world, nil)
+						if _, ok := ridingCCs[e]; ok {
+							cc.MoveVertical(e, moveY, world.Transforms[e], world, nil)
 						}
 					}
 				}
@@ -85,19 +84,19 @@ func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World
 
 						if cc.CollideWithOneWayPlatform {
 
-							if slices.Contains(ridingCCs, e) {
-								cc.MoveVertical(moveY, world.Transforms[e], world, nil)
+							if _, ok := ridingCCs[e]; ok {
+								cc.MoveVertical(e, moveY, world.Transforms[e], world, nil)
 							}
 						}
 
 					} else {
 						ccAABB := cc.GetAABB(e, world)
 						if AABBOverlap(*ccAABB, *platform.AABB) {
-							cc.MoveVertical(platform.AABB.Top()-ccAABB.Bottom(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
+							cc.MoveVertical(e, platform.AABB.Top()-ccAABB.Bottom(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
 								fmt.Println("Squished.")
 							})
-						} else if slices.Contains(ridingCCs, e) {
-							cc.MoveVertical(moveY, world.Transforms[e], world, nil)
+						} else if _, ok := ridingCCs[e]; ok {
+							cc.MoveVertical(e, moveY, world.Transforms[e], world, nil)
 						}
 
 					}
@@ -109,15 +108,15 @@ func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World
 	}
 }
 
-func (platform *Platform) GetAllRidingCharacterControllers(platformEntity Entity, world *World) []Entity {
-	ridingCharacterControllers := make([]Entity, 0)
+func (platform *Platform) GetAllRidingCharacterControllers(platformEntity Entity, world *World) map[Entity]struct{} {
+	ridingCharacterControllers := make(map[Entity]struct{})
 	for e, cc := range world.CharacterControllers {
 		ccAABB := cc.GetAABB(e, world)
 		if math.Abs(ccAABB.Bottom()-platform.AABB.Top()) <= 1 &&
 			ccAABB.Right() > platform.AABB.Left() &&
 			ccAABB.Left() < platform.AABB.Right() {
 
-			ridingCharacterControllers = append(ridingCharacterControllers, e)
+			ridingCharacterControllers[e] = struct{}{}
 
 		}
 	}

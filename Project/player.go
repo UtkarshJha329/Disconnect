@@ -2,6 +2,7 @@ package Project
 
 import (
 	"Disconnect/Engine"
+	"math"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -16,6 +17,10 @@ var jumpBufferTimerSystem Engine.TimerSystem
 var coyeteTime time.Duration = time.Duration(0.15 * float64(time.Second))
 var coyeteBufferTimerSystem Engine.TimerSystem
 var oldFrameGrounded bool = false
+
+var playerWallSlideSpeed float64 = 10.0
+var playerWallClimbSpeed float64 = 100.0
+var playerWallJumpSpeed float64 = 800.0
 
 func PlayerInitFunc(world *Engine.World) {
 
@@ -83,10 +88,6 @@ func PlayerUpdateFunc(world *Engine.World, dt float64) {
 
 	playerCharacterController := world.CharacterControllers[playerEntity]
 
-	if oldFrameGrounded && !playerCharacterController.Grounded {
-		coyeteBufferTimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(coyeteTime, false, func() {})
-	}
-
 	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
 		playerCharacterController.Velocity.X = -playerCharacterController.MoveSpeed
 	} else if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
@@ -95,24 +96,48 @@ func PlayerUpdateFunc(world *Engine.World, dt float64) {
 		playerCharacterController.Velocity.X = 0
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
+	dir := math.Copysign(1.0, playerCharacterController.Velocity.X)
+	if !playerCharacterController.Grounded &&
+		playerCharacterController.Velocity.Y > 0 &&
+		playerCharacterController.TouchingWall(dir, playerEntity, world) {
+
+		playerCharacterController.Velocity.Y = min(playerCharacterController.Velocity.Y, playerWallSlideSpeed)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 		if !jumpBufferTimerSystem.IsTimerSystemPoolFilled() {
 			jumpBufferTimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(jumpBufferTime, false, func() {})
 		}
 	}
 
-	if (jumpBufferTimerSystem.TimerSystemPoolHasRunningTimers() ||
-		inpututil.IsKeyJustPressed(ebiten.KeyArrowUp)) &&
-		(playerCharacterController.Grounded ||
-			coyeteBufferTimerSystem.TimerSystemPoolHasRunningTimers()) {
+	if (jumpBufferTimerSystem.TimerSystemPoolHasRunningTimers() && playerCharacterController.Grounded) ||
+		(inpututil.IsKeyJustPressed(ebiten.KeySpace) && playerCharacterController.Grounded) ||
+		(inpututil.IsKeyJustPressed(ebiten.KeySpace) && coyeteBufferTimerSystem.TimerSystemPoolHasRunningTimers()) {
 
 		playerCharacterController.Velocity.Y = -playerCharacterController.JumpSpeed
 	}
 
-	if inpututil.IsKeyJustReleased(ebiten.KeyArrowUp) &&
+	if inpututil.IsKeyJustReleased(ebiten.KeySpace) &&
 		playerCharacterController.Velocity.Y < 0 {
 
 		playerCharacterController.Velocity.Y *= 0.5
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && playerCharacterController.TouchingWall(-1, playerEntity, world) {
+
+		playerCharacterController.Velocity.X = playerWallJumpSpeed
+		playerCharacterController.Velocity.Y = -playerCharacterController.JumpSpeed
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeySpace) && playerCharacterController.TouchingWall(1, playerEntity, world) {
+
+		playerCharacterController.Velocity.X = -playerWallJumpSpeed
+		playerCharacterController.Velocity.Y = -playerCharacterController.JumpSpeed
+	}
+
+	if (playerCharacterController.TouchingWall(1, playerEntity, world) || playerCharacterController.TouchingWall(-1, playerEntity, world)) &&
+		ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		playerCharacterController.Velocity.Y = -playerWallClimbSpeed
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
@@ -122,13 +147,17 @@ func PlayerUpdateFunc(world *Engine.World, dt float64) {
 		playerCharacterController.CollideWithOneWayPlatform = true
 	}
 
+	oldFrameGrounded = playerCharacterController.Grounded
+
+	playerCharacterController.UpdateCharacter(playerEntity, world, world.Transforms[playerEntity], dt)
+
 	if playerCharacterController.Grounded {
 		jumpBufferTimerSystem.ForceEndAllTimersForNextUpdate()
 		coyeteBufferTimerSystem.ForceEndAllTimersForNextUpdate()
 	}
 
-	oldFrameGrounded = playerCharacterController.Grounded
-
-	playerCharacterController.UpdateCharacter(world, world.Transforms[playerEntity], dt)
+	if oldFrameGrounded && !playerCharacterController.Grounded && playerCharacterController.Velocity.Y >= 0 {
+		coyeteBufferTimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(coyeteTime, false, func() {})
+	}
 
 }

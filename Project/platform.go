@@ -2,7 +2,6 @@ package Project
 
 import (
 	"Disconnect/Engine"
-	"fmt"
 	"time"
 )
 
@@ -22,7 +21,6 @@ func PlatformsInitFunc(world *Engine.World) {
 		true,
 		func() {
 			world.Platforms[platform2Index].Velocity.X *= -1
-			fmt.Println("Changed Platform velocity to : ", world.Platforms[platform2Index].Velocity.X)
 		},
 	)
 
@@ -37,7 +35,6 @@ func PlatformsInitFunc(world *Engine.World) {
 		true,
 		func() {
 			world.Platforms[platform4Index].Velocity.Y *= -1
-			fmt.Println("Changed Platform velocity to : ", world.Platforms[platform2Index].Velocity.X)
 		},
 	)
 }

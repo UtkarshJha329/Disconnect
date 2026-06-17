@@ -29,6 +29,7 @@ type CollisionResult struct {
 }
 
 func (cc *CharacterController) UpdateCharacter(
+	characterControllerEntity Entity,
 	world *World,
 	transform *Transform,
 	dt float64,
@@ -59,10 +60,10 @@ func (cc *CharacterController) UpdateCharacter(
 	// 	world,
 	// 	transform,
 	// )
-	cc.MoveVertical(cc.Velocity.Y*dt, transform, world, func(collisionResult *CollisionResult) {})
+	cc.MoveVertical(characterControllerEntity, cc.Velocity.Y*dt, transform, world, func(collisionResult *CollisionResult) {})
 }
 
-func (cc *CharacterController) MoveHorizontal(amount float64, transform *Transform, world *World, OnCollide func(collisionResult *CollisionResult)) {
+func (cc *CharacterController) MoveHorizontal(amount float64, transform *Transform, world *World, OnResolutionFailure func(collisionResult *CollisionResult)) {
 
 	cc.remainder.X += amount
 	move := math.Round(cc.remainder.X)
@@ -79,13 +80,13 @@ func (cc *CharacterController) MoveHorizontal(amount float64, transform *Transfo
 				Height: cc.Height,
 			}
 
-			collisionResult := cc.CollidesWithObstaclesAtPositionHorizontally(&playerCollider, sign, world)
+			collisionResult := cc.CollidesWithObstaclesAtPositionHorizontally(&playerCollider, world)
 			if collisionResult == nil {
 				transform.Position.X = transform.Position.X + sign
 				move -= sign
 			} else {
-				if OnCollide != nil {
-					OnCollide(collisionResult)
+				if OnResolutionFailure != nil {
+					OnResolutionFailure(collisionResult)
 				}
 				break
 			}
@@ -94,8 +95,9 @@ func (cc *CharacterController) MoveHorizontal(amount float64, transform *Transfo
 	}
 }
 
-func (cc *CharacterController) MoveVertical(amount float64, transform *Transform, world *World, OnCollide func(collisionResult *CollisionResult)) {
+func (cc *CharacterController) MoveVertical(characterControllerEntity Entity, amount float64, transform *Transform, world *World, OnResolutionFailure func(collisionResult *CollisionResult)) {
 
+	cc.Grounded = false
 	cc.remainder.Y += amount
 	move := math.Round(cc.remainder.Y)
 	if move != 0 {
@@ -117,20 +119,26 @@ func (cc *CharacterController) MoveVertical(amount float64, transform *Transform
 				move -= sign
 			} else {
 				if sign > 0 {
+					// fmt.Println("Setting grounded to true because colliding with entity : ", collisionResult.entity)
 					cc.Grounded = true
 				}
 				cc.Velocity.Y = 0.0
-				if OnCollide != nil {
-					OnCollide(collisionResult)
+				if OnResolutionFailure != nil {
+					OnResolutionFailure(collisionResult)
 				}
 				break
 			}
 
 		}
+	} else {
+		player := cc.GetAABB(characterControllerEntity, world)
+		player.Y += 1
+
+		cc.Grounded = cc.CollidesWithObstaclesAtPositionVertically(player, 1, world) != nil
 	}
 }
 
-func (cc *CharacterController) CollidesWithObstaclesAtPositionHorizontally(characterCollider *AABB, direction float64, world *World) *CollisionResult {
+func (cc *CharacterController) CollidesWithObstaclesAtPositionHorizontally(characterCollider *AABB, world *World) *CollisionResult {
 
 	for e, platform := range world.Platforms {
 
@@ -178,6 +186,15 @@ func (cc *CharacterController) CollidesWithObstaclesAtPositionVertically(charact
 	return nil
 }
 
+func (cc *CharacterController) TouchingWall(dir float64, e Entity, world *World) bool {
+
+	aabb := cc.GetAABB(e, world)
+	aabb.X += dir
+
+	collisionResult := cc.CollidesWithObstaclesAtPositionHorizontally(aabb, world)
+	return collisionResult != nil
+}
+
 func (cc *CharacterController) GetAABB(e Entity, world *World) *AABB {
 	return &AABB{
 		X:      world.Transforms[e].Position.X - (cc.Width / 2.0),
@@ -186,102 +203,3 @@ func (cc *CharacterController) GetAABB(e Entity, world *World) *AABB {
 		Height: cc.Height,
 	}
 }
-
-// func (cc *CharacterController) ResolveHorizontal(
-// 	world *World,
-// 	transform *Transform,
-// ) {
-
-// 	playerCollider := AABB{
-// 		X:      transform.Position.X - (cc.Width / 2.0),
-// 		Y:      transform.Position.Y - (cc.Height / 2.0),
-// 		Width:  cc.Width,
-// 		Height: cc.Height,
-// 	}
-
-// 	for _, collider := range world.LevelColliders {
-
-// 		if collider.Layer == DEAFULT {
-
-// 			if !AABBOverlap(playerCollider, *collider) {
-// 				continue
-// 			}
-
-// 			if cc.Velocity.X > 0 {
-
-// 				transform.Position.X = collider.X - (cc.Width / 2.0)
-
-// 			} else if cc.Velocity.X < 0 {
-
-// 				transform.Position.X = collider.X + collider.Width + (cc.Width / 2.0)
-// 			}
-
-// 			cc.Velocity.X = 0
-
-// 			playerCollider.X = transform.Position.X
-// 		}
-// 	}
-// }
-
-// func (cc *CharacterController) ResolveVertical(
-// 	world *World,
-// 	transform *Transform,
-// ) {
-
-// 	cc.Grounded = false
-
-// 	playerCollider := AABB{
-// 		X:      transform.Position.X - (cc.Width / 2.0),
-// 		Y:      transform.Position.Y - (cc.Height / 2.0),
-// 		Width:  cc.Width,
-// 		Height: cc.Height,
-// 	}
-
-// 	for e, collider := range world.LevelColliders {
-
-// 		if collider.Layer == DEAFULT {
-// 			if !AABBOverlap(playerCollider, *collider) {
-// 				continue
-// 			}
-
-// 			if cc.Velocity.Y > 0 {
-
-// 				transform.Position.Y = collider.Y - (cc.Height / 2.0)
-
-// 				cc.Grounded = true
-// 				cc.CurrentlyOnPlatform = &e
-
-// 			} else if cc.Velocity.Y < 0 {
-
-// 				transform.Position.Y = collider.Y + collider.Height + (cc.Height / 2.0)
-// 			}
-
-// 			cc.Velocity.Y = 0
-
-// 			playerCollider.Y = transform.Position.Y
-
-// 		} else if collider.Layer == ONE_WAY_PLATFORMS && cc.CollideWithOneWayPlatform {
-
-// 			if playerCollider.Right() > collider.Left() &&
-// 				playerCollider.Left() < collider.Right() {
-
-// 				if cc.Velocity.Y > 0 &&
-// 					cc.oldBottom <= collider.Top() &&
-// 					playerCollider.Bottom() >= collider.Top() {
-
-// 					transform.Position.Y = collider.Top() - (cc.Height / 2.0)
-
-// 					cc.Velocity.Y = 0
-// 					cc.Grounded = true
-// 					cc.CurrentlyOnPlatform = &e
-
-// 					playerCollider.Y = transform.Position.Y - (cc.Height / 2.0)
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	if !cc.Grounded {
-// 		cc.CurrentlyOnPlatform = nil
-// 	}
-// }
