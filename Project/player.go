@@ -42,6 +42,8 @@ type Player struct {
 	DashTime  time.Duration
 	DashTimer Engine.TimerSystem
 
+	PlatformMomentumDecay Engine.Vector2
+
 	OldFrameGrounded bool
 
 	JumpJustPressed  bool
@@ -378,6 +380,8 @@ func PlayerInitFunc(world *Engine.World) {
 		WallJumpSpeedY: 600.0,
 		DashSpeed:      900.0,
 
+		PlatformMomentumDecay: Engine.Vector2{X: 0.95, Y: 0.95},
+
 		JumpBufferTime:   time.Duration(0.15 * float64(time.Second)),
 		CoyoteTime:       time.Duration(0.15 * float64(time.Second)),
 		WallJumpLockTime: time.Duration(0.25 * float64(time.Second)),
@@ -417,6 +421,7 @@ func PlayerInitFunc(world *Engine.World) {
 		Grounded:                  false,
 		CollideWithOneWayPlatform: true,
 		Velocity:                  Engine.Vector2{X: 0, Y: 0},
+		PlatformMomentumDecay:     player.PlatformMomentumDecay,
 	}
 
 	gunEntity := world.CreateSpriteFromFileInSceneWithParentEntity(&world.Scene, "Assets/gun.png", player.Entity)
