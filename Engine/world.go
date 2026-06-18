@@ -13,11 +13,12 @@ type World struct {
 	Sprites              map[Entity]*Sprite
 	CharacterControllers map[Entity]*CharacterController
 	Platforms            map[Entity]*Platform
+	Triggers             map[Entity]*Trigger
 
 	Cameras map[Entity]*Camera
 
-	Parents  map[Entity]*Entity
-	Children map[Entity][]*Entity
+	Parents  map[Entity]Entity
+	Children map[Entity][]Entity
 	Alive    map[Entity]bool
 
 	Scene             Scene
@@ -33,11 +34,12 @@ func NewWorld() *World {
 		Sprites:              make(map[Entity]*Sprite),
 		CharacterControllers: make(map[Entity]*CharacterController),
 		Platforms:            make(map[Entity]*Platform),
+		Triggers:             make(map[Entity]*Trigger),
 
 		Cameras: make(map[Entity]*Camera),
 
-		Parents:  make(map[Entity]*Entity),
-		Children: make(map[Entity][]*Entity),
+		Parents:  make(map[Entity]Entity),
+		Children: make(map[Entity][]Entity),
 		Alive:    make(map[Entity]bool),
 	}
 
@@ -51,15 +53,15 @@ func NewWorld() *World {
 }
 
 func (world *World) MakeEntityAChildOfB(a, b Entity) {
-	world.Children[b] = append(world.Children[b], &a)
-	world.Parents[a] = &b
+	world.Children[b] = append(world.Children[b], a)
+	world.Parents[a] = b
 }
 
 func (e Entity) CalculateHierarchyWorldTransform(world *World, parentWorldTransform ebiten.GeoM) {
 	local := world.Transforms[e].CalculateLocalMatrix()
 
 	if parentEntity, ok := world.Parents[e]; ok {
-		parentPivot := world.Transforms[*parentEntity].Pivot
+		parentPivot := world.Transforms[parentEntity].Pivot
 		local.Translate(parentPivot.X, parentPivot.Y)
 	}
 
@@ -76,9 +78,29 @@ func (world *World) NewEntity() Entity {
 		Rotation: 0,
 		Scale:    Vector2{X: 1, Y: 1},
 	}
-	world.Children[e] = make([]*Entity, 0)
+	world.Children[e] = make([]Entity, 0)
 	nextEntity++
 	return e
+}
+
+func (world *World) SetEntityAlive(entityToAlive Entity) {
+
+	world.Alive[entityToAlive] = true
+
+	for _, child := range world.Children[entityToAlive] {
+		world.SetEntityAlive(child)
+	}
+
+}
+
+func (world *World) KillEntity(entityToKill Entity) {
+
+	world.Alive[entityToKill] = false
+
+	for _, child := range world.Children[entityToKill] {
+		world.KillEntity(child)
+	}
+
 }
 
 func (world *World) CreateEntityInScene(scene *Scene) Entity {
@@ -121,8 +143,23 @@ func (world *World) CreateNewLevelColliderInScene(scene *Scene, X, Y, Width, Hei
 			Height: Height,
 			Layer:  Layer,
 		},
-		// OldPosition: Vector2{},
 		Collidable: true,
+	}
+	return e
+}
+
+func (world *World) CreateNewTriggerColliderInScene(scene *Scene, X, Y, Width, Height float64, Layer uint, OnCollision func(triggerEntity Entity, colliderEntity Entity, trigger *Trigger)) Entity {
+	e := world.CreateEntityInScene(scene)
+	world.Triggers[e] = &Trigger{
+		AABB: &AABB{
+			X:      X,
+			Y:      Y,
+			Width:  Width,
+			Height: Height,
+			Layer:  Layer,
+		},
+		Collidable:  true,
+		OnCollision: OnCollision,
 	}
 	return e
 }
@@ -134,4 +171,26 @@ func (world *World) NewCameraInScene(scene *Scene, ScreenWidth, ScreenHeight flo
 		RenderTexture: ebiten.NewImage(int(ScreenWidth), int(ScreenHeight)),
 	}
 	return e
+}
+
+func (world *World) PerformTriggerCharacterColliderChecks() {
+
+	for triggerEntity, trigger := range world.Triggers {
+
+		if !world.Alive[triggerEntity] || !trigger.Collidable {
+			continue
+		}
+
+		for characterEntity, character := range world.CharacterControllers {
+
+			if !world.Alive[characterEntity] {
+				continue
+			}
+
+			if AABBOverlap(*trigger.AABB, *character.GetAABB(characterEntity, world)) {
+				trigger.OnCollision(triggerEntity, characterEntity, trigger)
+			}
+
+		}
+	}
 }

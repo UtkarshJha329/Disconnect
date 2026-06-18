@@ -209,10 +209,10 @@ func (cc *CharacterController) TouchingWall(dir float64, e Entity, world *World)
 	return collisionResult != nil
 }
 
-func (cc *CharacterController) GetAABB(e Entity, world *World) *AABB {
+func (cc *CharacterController) GetAABB(characterEntity Entity, world *World) *AABB {
 	return &AABB{
-		X:      world.Transforms[e].Position.X - (cc.Width / 2.0),
-		Y:      world.Transforms[e].Position.Y - (cc.Height / 2.0),
+		X:      world.Transforms[characterEntity].Position.X - (cc.Width / 2.0),
+		Y:      world.Transforms[characterEntity].Position.Y - (cc.Height / 2.0),
 		Width:  cc.Width,
 		Height: cc.Height,
 	}

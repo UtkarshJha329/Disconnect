@@ -45,6 +45,23 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			float32(collider.Width),
 			float32(collider.Height),
 			1,
+			color.RGBA{0, 255, 0, 255},
+			false,
+		)
+	}
+
+	for _, trigger := range world.Triggers {
+
+		collider := trigger.AABB
+		x, y := cameraMatrix.Apply(collider.X, collider.Y)
+
+		vector.StrokeRect(
+			camera.RenderTexture,
+			float32(x),
+			float32(y),
+			float32(collider.Width),
+			float32(collider.Height),
+			1,
 			color.RGBA{255, 0, 0, 255},
 			false,
 		)
@@ -101,12 +118,14 @@ func main() {
 		Project.PlatformsInitFunc,
 		Project.PlayerInitFunc,
 		Project.MainCameraInitFunc,
+		Project.TriggersInitFunc,
 	)
 
 	world.EntityUpdateFuncs = append(world.EntityUpdateFuncs,
 		Project.PlatformsUpdateFunc,
 		Project.PlayerUpdateFunc,
 		Project.MainCameraUpdateFunc,
+		Project.TriggersUpdateFunc,
 	)
 
 	for _, initFunc := range world.EntityInitfuncs {

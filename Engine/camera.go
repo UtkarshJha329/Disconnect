@@ -21,3 +21,15 @@ func (camera *Camera) GetCameraTransformMatrix(cameraEntity Entity, world *World
 
 	return &cameraMatrix
 }
+
+func (camera *Camera) GetScreenCenterInWorld(cameraEntity Entity, world *World) Vector2 {
+	screenCenter := Vector2{X: camera.ScreenDims.X / 2.0, Y: camera.ScreenDims.Y / 2.0}
+
+	cameraMatrix := camera.GetCameraTransformMatrix(cameraEntity, world)
+	if cameraMatrix.IsInvertible() {
+		cameraMatrix.Invert()
+	}
+
+	worldScreenCenterX, worldScreenCenterY := cameraMatrix.Apply(screenCenter.X, screenCenter.Y)
+	return Vector2{X: worldScreenCenterX, Y: worldScreenCenterY}
+}

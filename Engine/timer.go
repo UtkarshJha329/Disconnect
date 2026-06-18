@@ -1,9 +1,5 @@
 package Engine
 
-import (
-	"time"
-)
-
 const (
 	// WARNING!!!!!! MUST BE SAME AS INTERPOLATION STATE!!!
 	TimerState_Running = iota
@@ -12,18 +8,18 @@ const (
 )
 
 type Timer struct {
-	TimerTotalDuration     time.Duration
-	TimerDurationRemaining time.Duration
+	TimerTotalDuration     float64
+	TimerDurationRemaining float64
 	Loop                   bool
 	TimerState             int
 	OnFinish               func()
 }
 
-func (timer *Timer) TimePassedSinceStart() time.Duration {
+func (timer *Timer) TimePassedSinceStart() float64 {
 	return timer.TimerTotalDuration - timer.TimerDurationRemaining
 }
 
-func (timer *Timer) SetDuration(duration time.Duration) {
+func (timer *Timer) SetDuration(duration float64) {
 	timer.TimerTotalDuration = duration
 	timer.TimerDurationRemaining = duration
 }
@@ -46,18 +42,14 @@ func (timer *Timer) ForceEndCurrentLoopOfTimerForNextUpdate() {
 }
 
 type TimerSystem struct {
-	timerPool      Pool[Timer]
-	lastUpdateTime time.Time
-	delta          time.Duration
+	timerPool Pool[Timer]
 }
 
 func (timerSystem *TimerSystem) InitWithTimers(timerSystemName string, totalNumTimersToCreate int) {
 	timerSystem.timerPool.InitPool(timerSystemName, totalNumTimersToCreate)
-	timerSystem.lastUpdateTime = time.Now()
-	timerSystem.delta = 0.0 * time.Second
 }
 
-func (timerSystem *TimerSystem) SetTimerFromPoolWithDurationLoopAndFunc(duration time.Duration, shouldLoop bool, timerOnFinish func()) *PoolItem[Timer] {
+func (timerSystem *TimerSystem) SetTimerFromPoolWithDurationLoopAndFunc(duration float64, shouldLoop bool, timerOnFinish func()) *PoolItem[Timer] {
 	poolItemToReturn := timerSystem.timerPool.GetAnUnusedItemFromPool()
 
 	poolItemToReturn.Item.SetDuration(duration)
@@ -68,16 +60,13 @@ func (timerSystem *TimerSystem) SetTimerFromPoolWithDurationLoopAndFunc(duration
 	return poolItemToReturn
 }
 
-func (timerSystem *TimerSystem) UpdateAllTimerDeltasAndStates() {
-
-	timerSystem.delta = time.Since(timerSystem.lastUpdateTime)
-	timerSystem.lastUpdateTime = time.Now()
+func (timerSystem *TimerSystem) UpdateAllTimerDeltasAndStates(dt float64) {
 
 	timerSystem.timerPool.PerformOperationOnAlivePoolItems(func(curTimer *PoolItem[Timer]) {
 
 		if curTimer.Item.TimerState != TimerState_Paused {
 
-			curTimer.Item.TimerDurationRemaining -= timerSystem.delta
+			curTimer.Item.TimerDurationRemaining -= dt
 
 			if curTimer.Item.TimerDurationRemaining <= 0.0 {
 

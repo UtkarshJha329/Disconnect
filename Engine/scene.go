@@ -33,6 +33,6 @@ func (scene *Scene) CreateEntitiesToDrawNonSortedFromEntity(entity Entity, paren
 	}
 
 	for _, child := range scene.world.Children[entity] {
-		scene.CreateEntitiesToDrawNonSortedFromEntity(*child, scene.world.Transforms[entity].WorldTransformMatrix)
+		scene.CreateEntitiesToDrawNonSortedFromEntity(child, scene.world.Transforms[entity].WorldTransformMatrix)
 	}
 }

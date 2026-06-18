@@ -1,7 +1,5 @@
 package Engine
 
-import "time"
-
 const (
 	Interpolation_Type_Linear = iota
 )
@@ -51,7 +49,7 @@ func (interpolationSystem *InterpolationSystem[T]) InitWithInterpolationsInPool(
 	interpolationSystem.TimerSystem.InitWithTimers(interpolationSystemName+"'s Timer System", totalNumInterpolationsToCreateInPool)
 }
 
-func (interpolationSystem *InterpolationSystem[T]) CreateNewInterpolation(interpolateStartValue T, interpolateValue *T, interpolateToValue *T, interpolateInTime time.Duration, shouldLoop bool, pingPong bool, InterpolationCalculator func(t *float64, startValue T, currentValue *T, futureValue *T), OnFinishInterpolation func()) *PoolItem[Interpolation[T]] {
+func (interpolationSystem *InterpolationSystem[T]) CreateNewInterpolation(interpolateStartValue T, interpolateValue *T, interpolateToValue *T, interpolateInTime float64, shouldLoop bool, pingPong bool, InterpolationCalculator func(t *float64, startValue T, currentValue *T, futureValue *T), OnFinishInterpolation func()) *PoolItem[Interpolation[T]] {
 
 	curInterpolationPoolItem := interpolationSystem.InterpolationsPool.GetAnUnusedItemFromPool()
 
@@ -73,9 +71,9 @@ func (interpolationSystem *InterpolationSystem[T]) CreateNewInterpolation(interp
 	return curInterpolationPoolItem
 }
 
-func (interpolationSystem *InterpolationSystem[T]) UpdateAllInterpolationDeltasAndStates() {
+func (interpolationSystem *InterpolationSystem[T]) UpdateAllInterpolationDeltasAndStates(dt float64) {
 
-	interpolationSystem.TimerSystem.UpdateAllTimerDeltasAndStates()
+	interpolationSystem.TimerSystem.UpdateAllTimerDeltasAndStates(dt)
 
 	interpolationSystem.InterpolationsPool.PerformOperationOnAlivePoolItems(func(curInterpolationPoolItem *PoolItem[Interpolation[T]]) {
 		curInterpolationParameter := curInterpolationPoolItem.Item.GetInterpolationParameter()

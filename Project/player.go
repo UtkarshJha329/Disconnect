@@ -3,7 +3,6 @@ package Project
 import (
 	"Disconnect/Engine"
 	"math"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -25,21 +24,21 @@ type Player struct {
 	MoveSpeed float64
 
 	JumpSpeed       float64
-	JumpBufferTime  time.Duration
+	JumpBufferTime  float64
 	JumpBufferTimer Engine.TimerSystem
 
-	CoyoteTime  time.Duration
+	CoyoteTime  float64
 	CoyoteTimer Engine.TimerSystem
 
 	WallSlideSpeed    float64
 	WallClimbSpeed    float64
 	WallJumpSpeedX    float64
 	WallJumpSpeedY    float64
-	WallJumpLockTime  time.Duration
+	WallJumpLockTime  float64
 	WallJumpLockTimer Engine.TimerSystem
 
 	DashSpeed float64
-	DashTime  time.Duration
+	DashTime  float64
 	DashTimer Engine.TimerSystem
 
 	PlatformMomentumDecay Engine.Vector2
@@ -74,11 +73,18 @@ func (player *Player) ChangeState(playerState PlayerState) {
 	playerState.Enter(player)
 }
 
-func (player *Player) UpdateTimers() {
-	player.JumpBufferTimer.UpdateAllTimerDeltasAndStates()
-	player.CoyoteTimer.UpdateAllTimerDeltasAndStates()
-	player.WallJumpLockTimer.UpdateAllTimerDeltasAndStates()
-	player.DashTimer.UpdateAllTimerDeltasAndStates()
+func (player *Player) UpdateTimers(dt float64) {
+	player.JumpBufferTimer.UpdateAllTimerDeltasAndStates(dt)
+	player.CoyoteTimer.UpdateAllTimerDeltasAndStates(dt)
+	player.WallJumpLockTimer.UpdateAllTimerDeltasAndStates(dt)
+	player.DashTimer.UpdateAllTimerDeltasAndStates(dt)
+}
+
+func (player *Player) ForceEndAllTimers() {
+	player.JumpBufferTimer.ForceEndAllTimersForNextUpdate()
+	player.CoyoteTimer.ForceEndAllTimersForNextUpdate()
+	player.WallJumpLockTimer.ForceEndAllTimersForNextUpdate()
+	player.DashTimer.ForceEndAllTimersForNextUpdate()
 }
 
 func (player *Player) RefreshInput() {
@@ -382,10 +388,10 @@ func PlayerInitFunc(world *Engine.World) {
 
 		PlatformMomentumDecay: Engine.Vector2{X: 0.95, Y: 0.95},
 
-		JumpBufferTime:   time.Duration(0.15 * float64(time.Second)),
-		CoyoteTime:       time.Duration(0.15 * float64(time.Second)),
-		WallJumpLockTime: time.Duration(0.25 * float64(time.Second)),
-		DashTime:         time.Duration(0.15 * float64(time.Second)),
+		JumpBufferTime:   0.15,
+		CoyoteTime:       0.15,
+		WallJumpLockTime: 0.25,
+		DashTime:         0.15,
 	}
 
 	player.JumpBufferTimer.InitWithTimers("Jump Buffer Timer System", 4)
@@ -439,14 +445,20 @@ func PlayerInitFunc(world *Engine.World) {
 }
 
 func PlayerUpdateFunc(world *Engine.World, dt float64) {
-	player.UpdateTimers()
-	player.RefreshInput()
 
-	player.state.Update(player, dt)
+	if world.Alive[player.Entity] {
 
-	cc := player.CC()
-	player.OldFrameGrounded = cc.Grounded
-	cc.UpdateCharacter(player.Entity, world, world.Transforms[player.Entity], dt)
+		player.UpdateTimers(dt)
+		player.RefreshInput()
 
-	player.state.PostUpdate(player)
+		player.state.Update(player, dt)
+
+		cc := player.CC()
+		player.OldFrameGrounded = cc.Grounded
+		cc.UpdateCharacter(player.Entity, world, world.Transforms[player.Entity], dt)
+
+		player.state.PostUpdate(player)
+	} else {
+		player.ForceEndAllTimers()
+	}
 }
