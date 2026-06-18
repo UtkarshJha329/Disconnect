@@ -148,6 +148,12 @@ func (state *GroundedState) Update(player *Player, dt float64) {
 
 	if player.JumpBufferTimer.TimerSystemPoolHasRunningTimers() {
 		cc.Velocity.Y = -cc.JumpSpeed
+
+		ps := player.World.ParticleSystems[player.Entity]
+		ps.Offset = Engine.Vector2{X: 0, Y: player.CC().Height / 2.0}
+		ps.SpawnBurst(player.World, 4, &CelesteJumpDustConfig)
+		ps.Offset = Engine.Vector2{X: 0, Y: 0}
+
 		player.JumpBufferTimer.ForceEndAllTimersForNextUpdate()
 		player.ChangeState(&AirborneState{})
 		return
@@ -175,7 +181,9 @@ func (state *GroundedState) PostUpdate(player *Player) {
 
 func (state *GroundedState) Exit(player *Player) {}
 
-type AirborneState struct{}
+type AirborneState struct {
+	dustParticleSizeOffset float64
+}
 
 func (state *AirborneState) Name() string         { return "Airborne" }
 func (state *AirborneState) Enter(player *Player) {}
@@ -205,6 +213,13 @@ func (state *AirborneState) Update(player *Player, dt float64) {
 	}
 
 	player.HandleOneWayPlatform()
+
+	CelesteJumpTrailConfig.StartSize -= 2.0
+	ps := player.World.ParticleSystems[player.Entity]
+	ps.Offset = Engine.Vector2{X: 0, Y: player.CC().Height / 2.0}
+	ps.SpawnBurst(player.World, 2, &CelesteJumpTrailConfig)
+	ps.Offset = Engine.Vector2{X: 0, Y: 0}
+
 }
 
 func (state *AirborneState) PostUpdate(player *Player) {
@@ -220,7 +235,9 @@ func (state *AirborneState) PostUpdate(player *Player) {
 	}
 }
 
-func (state *AirborneState) Exit(player *Player) {}
+func (state *AirborneState) Exit(player *Player) {
+	CelesteJumpTrailConfig.StartSize = 16.0
+}
 
 type WallSlideState struct{}
 
@@ -489,22 +506,24 @@ func PlayerUpdateFunc(world *Engine.World, dt float64) {
 
 // CelesteDashTrailConfig leaves a static, fading after-image behind the player
 var CelesteDashTrailConfig = Engine.ParticleEmissionConfig{
-	EmissionRadius:    8.0, // Spawns roughly within the player's bounding box
-	SpeedMin:          0.0, // 0 Speed = They stay exactly where they spawned!
+	ConfigName:        "Dash Trail",
+	EmissionRadius:    8.0,
+	SpeedMin:          0.0,
 	SpeedMax:          0.0,
-	LifeMin:           0.1, // Very short life so the trail drops off quickly
+	LifeMin:           0.1,
 	LifeMax:           0.25,
-	StartSize:         16.0,                                     // Roughly the size of the player
-	EndSize:           0.0,                                      // Shrinks away
-	StartColor:        color.RGBA{R: 255, G: 40, B: 80, A: 180}, // Celeste Red, slightly transparent
-	EndColor:          color.RGBA{R: 255, G: 40, B: 80, A: 0},   // Fades to invisible
+	StartSize:         16.0,
+	EndSize:           0.0,
+	StartColor:        color.RGBA{R: 255, G: 40, B: 80, A: 180},
+	EndColor:          color.RGBA{R: 255, G: 40, B: 80, A: 0},
 	Gravity:           0.0,
-	Drag:              0.0, // No drag needed since speed is already 0
+	Drag:              0.0,
 	TotalNumParticles: 50,
 }
 
 // Optional: A few sparks that fly OUTWARD when the dash starts
 var CelesteDashBurstConfig = Engine.ParticleEmissionConfig{
+	ConfigName:        "Dash Burst",
 	EmissionRadius:    4.0,
 	SpeedMin:          100.0,
 	SpeedMax:          300.0,
@@ -512,31 +531,33 @@ var CelesteDashBurstConfig = Engine.ParticleEmissionConfig{
 	LifeMax:           0.4,
 	StartSize:         4.0,
 	EndSize:           0.0,
-	StartColor:        color.RGBA{R: 255, G: 255, B: 255, A: 255}, // White impact sparks
-	EndColor:          color.RGBA{R: 255, G: 40, B: 80, A: 0},     // Fade to red
+	StartColor:        color.RGBA{R: 255, G: 255, B: 255, A: 255},
+	EndColor:          color.RGBA{R: 255, G: 40, B: 80, A: 0},
 	Gravity:           0.0,
-	Drag:              0.1, // High drag so they stop quickly
+	Drag:              0.1,
 	TotalNumParticles: 50,
 }
 
 // CelesteDeathConfig is the main red shatter effect
 var CelesteDeathConfig = Engine.ParticleEmissionConfig{
-	EmissionRadius:    4.0,   // Starts very close to the center
-	SpeedMin:          150.0, // Fast initial burst
+	ConfigName:        "Death",
+	EmissionRadius:    4.0,
+	SpeedMin:          150.0,
 	SpeedMax:          350.0,
-	LifeMin:           0.6, // Particles fade out relatively quickly
+	LifeMin:           0.6,
 	LifeMax:           1.2,
-	StartSize:         6.0,                                      // Medium sized chunks
-	EndSize:           0.0,                                      // Shrink to nothing
-	StartColor:        color.RGBA{R: 255, G: 30, B: 80, A: 255}, // Bright Celeste Red/Pink
-	EndColor:          color.RGBA{R: 255, G: 30, B: 80, A: 0},   // Fades to transparent
-	Gravity:           0.0,                                      // No gravity, they just float and stop
-	Drag:              0.08,                                     // High drag so they lose momentum fast (the "shatter" feel)
+	StartSize:         6.0,
+	EndSize:           0.0,
+	StartColor:        color.RGBA{R: 255, G: 30, B: 80, A: 255},
+	EndColor:          color.RGBA{R: 255, G: 30, B: 80, A: 0},
+	Gravity:           0.0,
+	Drag:              0.08,
 	TotalNumParticles: 50,
 }
 
 // CelesteDeathSparkConfig is a subtle white/yellow flash for extra impact
 var CelesteDeathSparkConfig = Engine.ParticleEmissionConfig{
+	ConfigName:        "Death Spark",
 	EmissionRadius:    2.0,
 	SpeedMin:          250.0,
 	SpeedMax:          500.0,
@@ -544,9 +565,43 @@ var CelesteDeathSparkConfig = Engine.ParticleEmissionConfig{
 	LifeMax:           0.4,
 	StartSize:         4.0,
 	EndSize:           0.0,
-	StartColor:        color.RGBA{R: 255, G: 255, B: 200, A: 255}, // Bright white/yellow
+	StartColor:        color.RGBA{R: 255, G: 255, B: 200, A: 255},
 	EndColor:          color.RGBA{R: 255, G: 255, B: 200, A: 0},
 	Gravity:           0.0,
-	Drag:              0.15, // Even higher drag for sparks
+	Drag:              0.15,
+	TotalNumParticles: 50,
+}
+
+// CelesteJumpTrailConfig leaves static, fading clouds behind the player
+var CelesteJumpTrailConfig = Engine.ParticleEmissionConfig{
+	ConfigName:        "Jump Trail",
+	EmissionRadius:    6.0,
+	SpeedMin:          0.0,
+	SpeedMax:          0.0,
+	LifeMin:           0.25,
+	LifeMax:           0.25,
+	StartSize:         16.0,
+	EndSize:           0.0,
+	StartColor:        color.RGBA{R: 230, G: 230, B: 230, A: 200},
+	EndColor:          color.RGBA{R: 20, G: 20, B: 20, A: 0},
+	Gravity:           0.0,
+	Drag:              0.0,
+	TotalNumParticles: 50,
+}
+
+// CelesteJumpDustConfig creates a gentle puff of dust at the player's feet
+var CelesteJumpDustConfig = Engine.ParticleEmissionConfig{
+	ConfigName:        "Jump Dust",
+	EmissionRadius:    4.0,
+	SpeedMin:          40.0,
+	SpeedMax:          120.0,
+	LifeMin:           0.15,
+	LifeMax:           0.3,
+	StartSize:         3.0,
+	EndSize:           8.0,
+	StartColor:        color.RGBA{R: 230, G: 230, B: 230, A: 200},
+	EndColor:          color.RGBA{R: 20, G: 20, B: 20, A: 0},
+	Gravity:           0.0,
+	Drag:              0.25,
 	TotalNumParticles: 50,
 }

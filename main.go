@@ -29,6 +29,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	camera := world.Cameras[Project.MainCameraEntity]
 	camera.RenderTexture.Clear()
+
+	Engine.DrawParticleSystems(camera, Project.MainCameraEntity, world)
+
 	world.Scene.RenderSceneHierarchy(Project.MainCameraEntity, world)
 
 	cameraMatrix := camera.GetCameraTransformMatrix(Project.MainCameraEntity, world)
@@ -85,8 +88,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			false,
 		)
 	}
-
-	Engine.DrawParticleSystems(camera, Project.MainCameraEntity, world)
 
 	cameras := make([]*Project.MainCameraEntityTransformPair, 0, len(world.Cameras))
 	for e, camera := range world.Cameras {
