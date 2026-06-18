@@ -26,9 +26,11 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	world.Scene.RenderSceneHierarchy(Project.MainCameraEntity, world)
 
 	camera := world.Cameras[Project.MainCameraEntity]
+	camera.RenderTexture.Clear()
+	world.Scene.RenderSceneHierarchy(Project.MainCameraEntity, world)
+
 	cameraMatrix := camera.GetCameraTransformMatrix(Project.MainCameraEntity, world)
 
 	for _, platform := range world.Platforms {
@@ -37,7 +39,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		x, y := cameraMatrix.Apply(collider.X, collider.Y)
 
 		vector.StrokeRect(
-			screen,
+			camera.RenderTexture,
 			float32(x),
 			float32(y),
 			float32(collider.Width),
@@ -56,7 +58,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		)
 
 		vector.StrokeRect(
-			screen,
+			camera.RenderTexture,
 			float32(x),
 			float32(y),
 			float32(cc.Width),
