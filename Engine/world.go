@@ -14,6 +14,8 @@ type World struct {
 	CharacterControllers map[Entity]*CharacterController
 	Platforms            map[Entity]*Platform
 
+	Cameras map[Entity]*Camera
+
 	Parents  map[Entity]*Entity
 	Children map[Entity][]*Entity
 	Alive    map[Entity]bool
@@ -31,6 +33,8 @@ func NewWorld() *World {
 		Sprites:              make(map[Entity]*Sprite),
 		CharacterControllers: make(map[Entity]*CharacterController),
 		Platforms:            make(map[Entity]*Platform),
+
+		Cameras: make(map[Entity]*Camera),
 
 		Parents:  make(map[Entity]*Entity),
 		Children: make(map[Entity][]*Entity),
@@ -119,6 +123,15 @@ func (world *World) CreateNewLevelColliderInScene(scene *Scene, X, Y, Width, Hei
 		},
 		// OldPosition: Vector2{},
 		Collidable: true,
+	}
+	return e
+}
+
+func (world *World) NewCameraInScene(scene *Scene, ScreenWidth, ScreenHeight float64) Entity {
+	e := world.CreateEntityInScene(scene)
+	world.Cameras[e] = &Camera{
+		ScreenDims:    Vector2{X: ScreenWidth, Y: ScreenHeight},
+		RenderTexture: ebiten.NewImage(int(ScreenWidth), int(ScreenHeight)),
 	}
 	return e
 }

@@ -3,8 +3,10 @@ package main
 import (
 	"Disconnect/Engine"
 	"Disconnect/Project"
+	"cmp"
 	"image/color"
 	"log"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -24,15 +26,20 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	world.Scene.RenderSceneHierarchy(screen, world)
+	world.Scene.RenderSceneHierarchy(Project.MainCameraEntity, world)
+
+	camera := world.Cameras[Project.MainCameraEntity]
+	cameraMatrix := camera.GetCameraTransformMatrix(Project.MainCameraEntity, world)
 
 	for _, platform := range world.Platforms {
 
 		collider := platform.AABB
+		x, y := cameraMatrix.Apply(collider.X, collider.Y)
+
 		vector.StrokeRect(
 			screen,
-			float32(collider.X),
-			float32(collider.Y),
+			float32(x),
+			float32(y),
 			float32(collider.Width),
 			float32(collider.Height),
 			1,
@@ -42,16 +49,40 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	for e, cc := range world.CharacterControllers {
+
+		x, y := cameraMatrix.Apply(
+			world.Transforms[e].Position.X-cc.Width/2.0,
+			world.Transforms[e].Position.Y-cc.Height/2.0,
+		)
+
 		vector.StrokeRect(
 			screen,
-			float32(world.Transforms[e].Position.X-(cc.Width/2.0)),
-			float32(world.Transforms[e].Position.Y-(cc.Height/2.0)),
+			float32(x),
+			float32(y),
 			float32(cc.Width),
 			float32(cc.Height),
 			1,
 			color.RGBA{0, 0, 255, 255},
 			false,
 		)
+	}
+
+	cameras := make([]*Project.MainCameraEntityTransformPair, 0, len(world.Cameras))
+	for e, camera := range world.Cameras {
+		curEle := &Project.MainCameraEntityTransformPair{
+			Entity:    e,
+			Transform: world.Transforms[e],
+			Camera:    camera,
+		}
+		cameras = append(cameras, curEle)
+	}
+	slices.SortFunc(cameras, func(a, b *Project.MainCameraEntityTransformPair) int {
+		return cmp.Compare(a.Transform.Position.Z, b.Transform.Position.Z)
+	})
+
+	op := ebiten.DrawImageOptions{}
+	for _, camera := range cameras {
+		screen.DrawImage(camera.Camera.RenderTexture, &op)
 	}
 }
 
@@ -67,11 +98,13 @@ func main() {
 	world.EntityInitfuncs = append(world.EntityInitfuncs,
 		Project.PlatformsInitFunc,
 		Project.PlayerInitFunc,
+		Project.MainCameraInitFunc,
 	)
 
 	world.EntityUpdateFuncs = append(world.EntityUpdateFuncs,
 		Project.PlatformsUpdateFunc,
 		Project.PlayerUpdateFunc,
+		Project.MainCameraUpdateFunc,
 	)
 
 	for _, initFunc := range world.EntityInitfuncs {
