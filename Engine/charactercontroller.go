@@ -60,7 +60,7 @@ func (cc *CharacterController) UpdateCharacter(
 	// 	world,
 	// 	transform,
 	// )
-	cc.MoveVertical(characterControllerEntity, cc.Velocity.Y*dt, transform, world, func(collisionResult *CollisionResult) {})
+	cc.MoveVertical(characterControllerEntity, cc.Velocity.Y*dt, true, transform, world, func(collisionResult *CollisionResult) {})
 }
 
 func (cc *CharacterController) MoveHorizontal(amount float64, transform *Transform, world *World, OnResolutionFailure func(collisionResult *CollisionResult)) {
@@ -95,9 +95,11 @@ func (cc *CharacterController) MoveHorizontal(amount float64, transform *Transfo
 	}
 }
 
-func (cc *CharacterController) MoveVertical(characterControllerEntity Entity, amount float64, transform *Transform, world *World, OnResolutionFailure func(collisionResult *CollisionResult)) {
+func (cc *CharacterController) MoveVertical(characterControllerEntity Entity, amount float64, changeGrouned bool, transform *Transform, world *World, OnResolutionFailure func(collisionResult *CollisionResult)) {
 
-	cc.Grounded = false
+	if changeGrouned {
+		cc.Grounded = false
+	}
 	cc.remainder.Y += amount
 	move := math.Round(cc.remainder.Y)
 	if move != 0 {
@@ -120,7 +122,10 @@ func (cc *CharacterController) MoveVertical(characterControllerEntity Entity, am
 			} else {
 				if sign > 0 {
 					// fmt.Println("Setting grounded to true because colliding with entity : ", collisionResult.entity)
-					cc.Grounded = true
+
+					if changeGrouned {
+						cc.Grounded = true
+					}
 				}
 				cc.Velocity.Y = 0.0
 				if OnResolutionFailure != nil {
@@ -150,7 +155,7 @@ func (cc *CharacterController) CollidesWithObstaclesAtPositionHorizontally(chara
 			continue
 		}
 
-		if platform.AABB.Layer == DEAFULT {
+		if platform.AABB.Layer == DEFAULT {
 			return &CollisionResult{platform.AABB, e}
 		}
 
@@ -166,7 +171,7 @@ func (cc *CharacterController) CollidesWithObstaclesAtPositionVertically(charact
 			continue
 		}
 
-		if platform.AABB.Layer == DEAFULT {
+		if platform.AABB.Layer == DEFAULT {
 			return &CollisionResult{platform.AABB, e}
 		}
 

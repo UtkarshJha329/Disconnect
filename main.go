@@ -15,7 +15,7 @@ type Game struct{}
 var world *Engine.World = Engine.NewWorld()
 
 func (g *Game) Update() error {
-	dt := 1.0 / 60.0
+	dt := 1.0 / float64(ebiten.TPS())
 	for _, updateFunc := range world.EntityUpdateFuncs {
 		updateFunc(world, dt)
 	}

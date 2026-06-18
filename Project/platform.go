@@ -10,11 +10,11 @@ var platformVelocityChangeTimer Engine.TimerSystem
 func PlatformsInitFunc(world *Engine.World) {
 	platformVelocityChangeTimer.InitWithTimers("Platform Velocity Change Timer", 10)
 
-	world.CreateNewLevelColliderInScene(&world.Scene, 0, 450, 640, 32, Engine.DEAFULT)
-	world.CreateNewLevelColliderInScene(&world.Scene, -16, 0, 16, 480, Engine.DEAFULT)
-	world.CreateNewLevelColliderInScene(&world.Scene, 639, 0, 16, 480, Engine.DEAFULT)
-	world.CreateNewLevelColliderInScene(&world.Scene, 100, 380, 120, 20, Engine.DEAFULT)
-	platform2Index := world.CreateNewLevelColliderInScene(&world.Scene, 300, 320, 120, 20, Engine.DEAFULT)
+	world.CreateNewLevelColliderInScene(&world.Scene, 0, 450, 640, 32, Engine.DEFAULT)
+	world.CreateNewLevelColliderInScene(&world.Scene, -16, 0, 16, 480, Engine.DEFAULT)
+	world.CreateNewLevelColliderInScene(&world.Scene, 639, 0, 16, 480, Engine.DEFAULT)
+	world.CreateNewLevelColliderInScene(&world.Scene, 100, 380, 120, 20, Engine.DEFAULT)
+	platform2Index := world.CreateNewLevelColliderInScene(&world.Scene, 300, 220, 120, 20, Engine.DEFAULT)
 	world.Platforms[platform2Index].Velocity.X = 100.0
 	platformVelocityChangeTimer.SetTimerFromPoolWithDurationLoopAndFunc(
 		time.Duration(2.0*float64(time.Second)),

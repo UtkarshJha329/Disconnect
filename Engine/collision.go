@@ -1,7 +1,7 @@
 package Engine
 
 const (
-	DEAFULT = iota
+	DEFAULT = iota
 	ONE_WAY_PLATFORMS
 )
 

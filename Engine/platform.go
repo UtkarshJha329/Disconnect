@@ -64,17 +64,17 @@ func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World
 					for e, cc := range world.CharacterControllers {
 						ccAABB := cc.GetAABB(e, world)
 						if AABBOverlap(*ccAABB, *platform.AABB) {
-							cc.MoveVertical(e, platform.AABB.Bottom()-ccAABB.Top(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
+							cc.MoveVertical(e, platform.AABB.Bottom()-ccAABB.Top(), false, world.Transforms[e], world, func(collisionResult *CollisionResult) {
 								fmt.Println("Squished.")
 							})
 						} else if _, ok := ridingCCs[e]; ok {
-							cc.MoveVertical(e, moveY, world.Transforms[e], world, nil)
+							cc.MoveVertical(e, moveY, false, world.Transforms[e], world, nil)
 						}
 					}
 				} else {
 					for e, cc := range world.CharacterControllers {
 						if _, ok := ridingCCs[e]; ok {
-							cc.MoveVertical(e, moveY, world.Transforms[e], world, nil)
+							cc.MoveVertical(e, moveY, false, world.Transforms[e], world, nil)
 						}
 					}
 				}
@@ -85,18 +85,18 @@ func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World
 						if cc.CollideWithOneWayPlatform {
 
 							if _, ok := ridingCCs[e]; ok {
-								cc.MoveVertical(e, moveY, world.Transforms[e], world, nil)
+								cc.MoveVertical(e, moveY, false, world.Transforms[e], world, nil)
 							}
 						}
 
 					} else {
 						ccAABB := cc.GetAABB(e, world)
 						if AABBOverlap(*ccAABB, *platform.AABB) {
-							cc.MoveVertical(e, platform.AABB.Top()-ccAABB.Bottom(), world.Transforms[e], world, func(collisionResult *CollisionResult) {
+							cc.MoveVertical(e, platform.AABB.Top()-ccAABB.Bottom(), false, world.Transforms[e], world, func(collisionResult *CollisionResult) {
 								fmt.Println("Squished.")
 							})
 						} else if _, ok := ridingCCs[e]; ok {
-							cc.MoveVertical(e, moveY, world.Transforms[e], world, nil)
+							cc.MoveVertical(e, moveY, false, world.Transforms[e], world, nil)
 						}
 
 					}
