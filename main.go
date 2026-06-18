@@ -86,6 +86,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		)
 	}
 
+	Engine.DrawParticleSystems(camera, Project.MainCameraEntity, world)
+
 	cameras := make([]*Project.MainCameraEntityTransformPair, 0, len(world.Cameras))
 	for e, camera := range world.Cameras {
 		curEle := &Project.MainCameraEntityTransformPair{
@@ -126,6 +128,7 @@ func main() {
 		Project.PlayerUpdateFunc,
 		Project.MainCameraUpdateFunc,
 		Project.TriggersUpdateFunc,
+		Engine.ParticlesUpdateFunc,
 	)
 
 	for _, initFunc := range world.EntityInitfuncs {

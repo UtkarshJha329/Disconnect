@@ -1,6 +1,9 @@
 package Engine
 
-import "math"
+import (
+	"math"
+	"math/rand/v2"
+)
 
 func DegreesToRadians(degrees float64) float64 {
 	return degrees * math.Pi / 180.0
@@ -92,4 +95,21 @@ func (a *Vector3) MultiplyVector2(b *Vector2) Vector3 {
 
 func (a *Vector3) DivideVector2(b *Vector2) Vector3 {
 	return Vector3{a.X / b.X, a.Y / b.Y, a.Z}
+}
+
+// Utility
+
+// RandomPointInCircle generates a uniform random point within a circle.
+func RandomPointInCircle(centerX, centerY, radius float64) *Vector2 {
+	// Generate a random angle between 0 and 2*Pi
+	theta := rand.Float64() * 2 * math.Pi
+
+	// Sqrt ensures the points are uniformly distributed by area
+	r := radius * math.Sqrt(rand.Float64())
+
+	// Convert polar coordinates to Cartesian coordinates
+	x := centerX + r*math.Cos(theta)
+	y := centerY + r*math.Sin(theta)
+
+	return &Vector2{x, y}
 }

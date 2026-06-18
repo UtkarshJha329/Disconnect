@@ -2,7 +2,6 @@ package Project
 
 import (
 	"Disconnect/Engine"
-	"fmt"
 )
 
 var playerRespawnTimerSystem Engine.TimerSystem
@@ -20,8 +19,12 @@ func TriggersInitFunc(world *Engine.World) {
 		Engine.DEFAULT,
 		func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
 			if colliderEntity == player.Entity {
-				fmt.Println("Collided with player entity : ", colliderEntity)
+				// fmt.Println("Collided with player entity : ", colliderEntity)
 				world.KillEntity(colliderEntity)
+
+				ps := world.ParticleSystems[colliderEntity]
+				ps.SpawnBurst(world, 40, CelesteDeathConfig)
+				ps.SpawnBurst(world, 15, CelesteDeathSparkConfig)
 
 				playerRespawnTimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(
 					2.0,

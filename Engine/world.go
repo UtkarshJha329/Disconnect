@@ -14,6 +14,7 @@ type World struct {
 	CharacterControllers map[Entity]*CharacterController
 	Platforms            map[Entity]*Platform
 	Triggers             map[Entity]*Trigger
+	ParticleSystems      map[Entity]*ParticleSystem
 
 	Cameras map[Entity]*Camera
 
@@ -29,12 +30,16 @@ type World struct {
 func NewWorld() *World {
 
 	world := World{
-		Names:                make(map[Entity]*string),
-		Transforms:           make(map[Entity]*Transform),
-		Sprites:              make(map[Entity]*Sprite),
+		Names: make(map[Entity]*string),
+
+		Transforms: make(map[Entity]*Transform),
+		Sprites:    make(map[Entity]*Sprite),
+
 		CharacterControllers: make(map[Entity]*CharacterController),
 		Platforms:            make(map[Entity]*Platform),
 		Triggers:             make(map[Entity]*Trigger),
+
+		ParticleSystems: make(map[Entity]*ParticleSystem),
 
 		Cameras: make(map[Entity]*Camera),
 
