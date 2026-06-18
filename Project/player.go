@@ -355,14 +355,14 @@ func (state *DashState) Update(player *Player, dt float64) {
 	// 1. Spawn the initial impact burst ONCE
 	if !state.hasSpawnedBurst {
 		ps := player.World.ParticleSystems[player.Entity]
-		ps.SpawnBurst(player.World, 15, CelesteDashBurstConfig)
+		ps.SpawnBurst(player.World, 15, &CelesteDashBurstConfig)
 		state.hasSpawnedBurst = true
 	}
 
 	// 2. Spawn the after-image trail EVERY frame
 	// We only need 1 or 2 particles per frame to make a solid trail
 	ps := player.World.ParticleSystems[player.Entity]
-	ps.SpawnBurst(player.World, 2, CelesteDashTrailConfig)
+	ps.SpawnBurst(player.World, 2, &CelesteDashTrailConfig)
 }
 
 func (state *DashState) PostUpdate(player *Player) {
@@ -488,61 +488,65 @@ func PlayerUpdateFunc(world *Engine.World, dt float64) {
 // Player Particle Effects Configs
 
 // CelesteDashTrailConfig leaves a static, fading after-image behind the player
-var CelesteDashTrailConfig = Engine.ParticleConfig{
-	EmissionRadius: 8.0, // Spawns roughly within the player's bounding box
-	SpeedMin:       0.0, // 0 Speed = They stay exactly where they spawned!
-	SpeedMax:       0.0,
-	LifeMin:        0.1, // Very short life so the trail drops off quickly
-	LifeMax:        0.25,
-	StartSize:      16.0,                                     // Roughly the size of the player
-	EndSize:        0.0,                                      // Shrinks away
-	StartColor:     color.RGBA{R: 255, G: 40, B: 80, A: 180}, // Celeste Red, slightly transparent
-	EndColor:       color.RGBA{R: 255, G: 40, B: 80, A: 0},   // Fades to invisible
-	Gravity:        0.0,
-	Drag:           0.0, // No drag needed since speed is already 0
+var CelesteDashTrailConfig = Engine.ParticleEmissionConfig{
+	EmissionRadius:    8.0, // Spawns roughly within the player's bounding box
+	SpeedMin:          0.0, // 0 Speed = They stay exactly where they spawned!
+	SpeedMax:          0.0,
+	LifeMin:           0.1, // Very short life so the trail drops off quickly
+	LifeMax:           0.25,
+	StartSize:         16.0,                                     // Roughly the size of the player
+	EndSize:           0.0,                                      // Shrinks away
+	StartColor:        color.RGBA{R: 255, G: 40, B: 80, A: 180}, // Celeste Red, slightly transparent
+	EndColor:          color.RGBA{R: 255, G: 40, B: 80, A: 0},   // Fades to invisible
+	Gravity:           0.0,
+	Drag:              0.0, // No drag needed since speed is already 0
+	TotalNumParticles: 50,
 }
 
 // Optional: A few sparks that fly OUTWARD when the dash starts
-var CelesteDashBurstConfig = Engine.ParticleConfig{
-	EmissionRadius: 4.0,
-	SpeedMin:       100.0,
-	SpeedMax:       300.0,
-	LifeMin:        0.2,
-	LifeMax:        0.4,
-	StartSize:      4.0,
-	EndSize:        0.0,
-	StartColor:     color.RGBA{R: 255, G: 255, B: 255, A: 255}, // White impact sparks
-	EndColor:       color.RGBA{R: 255, G: 40, B: 80, A: 0},     // Fade to red
-	Gravity:        0.0,
-	Drag:           0.1, // High drag so they stop quickly
+var CelesteDashBurstConfig = Engine.ParticleEmissionConfig{
+	EmissionRadius:    4.0,
+	SpeedMin:          100.0,
+	SpeedMax:          300.0,
+	LifeMin:           0.2,
+	LifeMax:           0.4,
+	StartSize:         4.0,
+	EndSize:           0.0,
+	StartColor:        color.RGBA{R: 255, G: 255, B: 255, A: 255}, // White impact sparks
+	EndColor:          color.RGBA{R: 255, G: 40, B: 80, A: 0},     // Fade to red
+	Gravity:           0.0,
+	Drag:              0.1, // High drag so they stop quickly
+	TotalNumParticles: 50,
 }
 
 // CelesteDeathConfig is the main red shatter effect
-var CelesteDeathConfig = Engine.ParticleConfig{
-	EmissionRadius: 4.0,   // Starts very close to the center
-	SpeedMin:       150.0, // Fast initial burst
-	SpeedMax:       350.0,
-	LifeMin:        0.6, // Particles fade out relatively quickly
-	LifeMax:        1.2,
-	StartSize:      6.0,                                      // Medium sized chunks
-	EndSize:        0.0,                                      // Shrink to nothing
-	StartColor:     color.RGBA{R: 255, G: 30, B: 80, A: 255}, // Bright Celeste Red/Pink
-	EndColor:       color.RGBA{R: 255, G: 30, B: 80, A: 0},   // Fades to transparent
-	Gravity:        0.0,                                      // No gravity, they just float and stop
-	Drag:           0.08,                                     // High drag so they lose momentum fast (the "shatter" feel)
+var CelesteDeathConfig = Engine.ParticleEmissionConfig{
+	EmissionRadius:    4.0,   // Starts very close to the center
+	SpeedMin:          150.0, // Fast initial burst
+	SpeedMax:          350.0,
+	LifeMin:           0.6, // Particles fade out relatively quickly
+	LifeMax:           1.2,
+	StartSize:         6.0,                                      // Medium sized chunks
+	EndSize:           0.0,                                      // Shrink to nothing
+	StartColor:        color.RGBA{R: 255, G: 30, B: 80, A: 255}, // Bright Celeste Red/Pink
+	EndColor:          color.RGBA{R: 255, G: 30, B: 80, A: 0},   // Fades to transparent
+	Gravity:           0.0,                                      // No gravity, they just float and stop
+	Drag:              0.08,                                     // High drag so they lose momentum fast (the "shatter" feel)
+	TotalNumParticles: 50,
 }
 
 // CelesteDeathSparkConfig is a subtle white/yellow flash for extra impact
-var CelesteDeathSparkConfig = Engine.ParticleConfig{
-	EmissionRadius: 2.0,
-	SpeedMin:       250.0,
-	SpeedMax:       500.0,
-	LifeMin:        0.2,
-	LifeMax:        0.4,
-	StartSize:      4.0,
-	EndSize:        0.0,
-	StartColor:     color.RGBA{R: 255, G: 255, B: 200, A: 255}, // Bright white/yellow
-	EndColor:       color.RGBA{R: 255, G: 255, B: 200, A: 0},
-	Gravity:        0.0,
-	Drag:           0.15, // Even higher drag for sparks
+var CelesteDeathSparkConfig = Engine.ParticleEmissionConfig{
+	EmissionRadius:    2.0,
+	SpeedMin:          250.0,
+	SpeedMax:          500.0,
+	LifeMin:           0.2,
+	LifeMax:           0.4,
+	StartSize:         4.0,
+	EndSize:           0.0,
+	StartColor:        color.RGBA{R: 255, G: 255, B: 200, A: 255}, // Bright white/yellow
+	EndColor:          color.RGBA{R: 255, G: 255, B: 200, A: 0},
+	Gravity:           0.0,
+	Drag:              0.15, // Even higher drag for sparks
+	TotalNumParticles: 50,
 }

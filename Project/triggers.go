@@ -23,8 +23,8 @@ func TriggersInitFunc(world *Engine.World) {
 				world.KillEntity(colliderEntity)
 
 				ps := world.ParticleSystems[colliderEntity]
-				ps.SpawnBurst(world, 40, CelesteDeathConfig)
-				ps.SpawnBurst(world, 15, CelesteDeathSparkConfig)
+				ps.SpawnBurst(world, 40, &CelesteDeathConfig)
+				ps.SpawnBurst(world, 15, &CelesteDeathSparkConfig)
 
 				playerRespawnTimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(
 					2.0,
