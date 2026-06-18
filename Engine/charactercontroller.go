@@ -51,10 +51,10 @@ func (cc *CharacterController) UpdateCharacter(
 		moveX += cc.PlatformMoveAmountLastFrame.X
 		moveY += cc.PlatformMoveAmountLastFrame.Y
 
-		// horizontalDecay := math.Pow(0.95, dt*60.0)
-		horizontalDecay := 1.0
-		// verticalDecay := math.Pow(0.50, dt*60.0)
-		verticalDecay := 1.0
+		horizontalDecay := math.Pow(0.95, dt*60.0)
+		// horizontalDecay := 1.0
+		verticalDecay := math.Pow(0.95, dt*60.0)
+		// verticalDecay := 1.0
 		cc.PlatformMoveAmountLastFrame.X *= horizontalDecay
 		cc.PlatformMoveAmountLastFrame.Y *= verticalDecay
 	}

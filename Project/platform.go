@@ -27,7 +27,7 @@ func PlatformsInitFunc(world *Engine.World) {
 	//world.CreateNewLevelColliderInScene(&world.Scene, 100, 0, 120, 32, Engine.DEAFULT)
 	world.CreateNewLevelColliderInScene(&world.Scene, 100, 280, 120, 20, Engine.ONE_WAY_PLATFORMS)
 
-	platform4Index := world.CreateNewLevelColliderInScene(&world.Scene, 100, 100, 120, 20, Engine.ONE_WAY_PLATFORMS)
+	platform4Index := world.CreateNewLevelColliderInScene(&world.Scene, 100, 50, 120, 20, Engine.ONE_WAY_PLATFORMS)
 
 	world.Platforms[platform4Index].Velocity.Y = -400.0
 	platformVelocityChangeTimer.SetTimerFromPoolWithDurationLoopAndFunc(
