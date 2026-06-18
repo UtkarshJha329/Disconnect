@@ -5,7 +5,8 @@ import (
 )
 
 type CharacterController struct {
-	Velocity Vector2
+	Velocity                    Vector2
+	PlatformMoveAmountLastFrame Vector2
 
 	Width  float64
 	Height float64
@@ -43,14 +44,22 @@ func (cc *CharacterController) UpdateCharacter(
 
 	cc.Velocity.Y += gravity * dt
 
-	// transform.Position.X += cc.Velocity.X * dt
+	moveX := cc.Velocity.X * dt
+	moveY := cc.Velocity.Y * dt
 
-	// cc.ResolveHorizontal(
-	// 	world,
-	// 	transform,
-	// )
+	if !cc.Grounded {
+		moveX += cc.PlatformMoveAmountLastFrame.X
+		moveY += cc.PlatformMoveAmountLastFrame.Y
 
-	cc.MoveHorizontal(cc.Velocity.X*dt, transform, world, func(collisionResult *CollisionResult) {})
+		// horizontalDecay := math.Pow(0.95, dt*60.0)
+		horizontalDecay := 1.0
+		// verticalDecay := math.Pow(0.50, dt*60.0)
+		verticalDecay := 1.0
+		cc.PlatformMoveAmountLastFrame.X *= horizontalDecay
+		cc.PlatformMoveAmountLastFrame.Y *= verticalDecay
+	}
+
+	cc.MoveHorizontal(moveX, transform, world, func(collisionResult *CollisionResult) {})
 
 	cc.oldBottom = transform.Position.Y + (cc.Height / 2.0)
 
@@ -60,7 +69,7 @@ func (cc *CharacterController) UpdateCharacter(
 	// 	world,
 	// 	transform,
 	// )
-	cc.MoveVertical(characterControllerEntity, cc.Velocity.Y*dt, true, transform, world, func(collisionResult *CollisionResult) {})
+	cc.MoveVertical(characterControllerEntity, moveY, true, transform, world, func(collisionResult *CollisionResult) {})
 }
 
 func (cc *CharacterController) MoveHorizontal(amount float64, transform *Transform, world *World, OnResolutionFailure func(collisionResult *CollisionResult)) {

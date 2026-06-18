@@ -19,8 +19,14 @@ func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World
 	moveX := math.Round(platform.Remainder.X)
 	moveY := math.Round(platform.Remainder.Y)
 
+	ridingCCs := platform.GetAllRidingCharacterControllers(platformEntity, world)
+	for e := range ridingCCs {
+		cc := world.CharacterControllers[e]
+		cc.PlatformMoveAmountLastFrame.X = x
+		cc.PlatformMoveAmountLastFrame.Y = y
+	}
+
 	if moveX != 0.0 || moveY != 0.0 {
-		ridingCCs := platform.GetAllRidingCharacterControllers(platformEntity, world)
 
 		platform.Collidable = false
 
