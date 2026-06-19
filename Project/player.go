@@ -60,6 +60,14 @@ type Player struct {
 	TouchingWallRight bool
 
 	state PlayerState
+
+	FacingDirection int
+
+	playerIdleAnimationIndex      int
+	playerJumpAnimationIndex      int
+	playerRunAnimationIndex       int
+	playerDashAnimationIndex      int
+	playerWallSlideAnimationIndex int
 }
 
 func (player *Player) CC() *Engine.CharacterController {
@@ -107,8 +115,10 @@ func (player *Player) RefreshInput() {
 func (player *Player) ApplyHorizontalInput() {
 	if player.LeftHeld {
 		player.CC().Velocity.X = -player.CC().MoveSpeed
+		player.FacingDirection = -1
 	} else if player.RightHeld {
 		player.CC().Velocity.X = player.CC().MoveSpeed
+		player.FacingDirection = 1
 	} else {
 		player.CC().Velocity.X = 0
 	}
@@ -139,6 +149,14 @@ func (state *GroundedState) Enter(player *Player) {
 func (state *GroundedState) Update(player *Player, dt float64) {
 	cc := player.CC()
 	player.ApplyHorizontalInput()
+
+	if cc.Velocity.X == 0 {
+		playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+		playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerIdleAnimationIndex)
+	} else {
+		playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+		playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerRunAnimationIndex)
+	}
 
 	if player.JumpJustPressed && !player.JumpBufferTimer.IsTimerSystemPoolFilled() {
 		player.JumpBufferTimer.SetTimerFromPoolWithDurationLoopAndFunc(
@@ -191,6 +209,9 @@ func (state *AirborneState) Enter(player *Player) {}
 func (state *AirborneState) Update(player *Player, dt float64) {
 	cc := player.CC()
 	player.ApplyHorizontalInput()
+
+	playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+	playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerJumpAnimationIndex)
 
 	if player.JumpJustPressed && !player.JumpBufferTimer.IsTimerSystemPoolFilled() {
 		player.JumpBufferTimer.SetTimerFromPoolWithDurationLoopAndFunc(
@@ -247,6 +268,9 @@ func (state *WallSlideState) Enter(player *Player) {}
 func (state *WallSlideState) Update(player *Player, dt float64) {
 	cc := player.CC()
 	player.ApplyHorizontalInput()
+
+	playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+	playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerWallSlideAnimationIndex)
 
 	if player.UpHeld {
 		cc.Velocity.Y = -player.WallClimbSpeed
@@ -376,6 +400,9 @@ func (state *DashState) Update(player *Player, dt float64) {
 		state.hasSpawnedBurst = true
 	}
 
+	playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+	playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerDashAnimationIndex)
+
 	// 2. Spawn the after-image trail EVERY frame
 	// We only need 1 or 2 particles per frame to make a solid trail
 	ps := player.World.ParticleSystems[player.Entity]
@@ -433,7 +460,7 @@ func PlayerInitFunc(world *Engine.World) {
 
 	screenWidth, screenHeight := ebiten.WindowSize()
 
-	player.Entity = world.CreateSpriteFromFileInScene(&world.Scene, "Assets/player/idle/00.png")
+	player.Entity = world.CreateSpriteFromFileInScene(&world.Scene, "Assets/player/idle/player_idle_sheet.png")
 	world.Transforms[player.Entity].Scale = Engine.Vector2{X: 2.0, Y: 2.0}
 	world.Transforms[player.Entity].Position = Engine.Vector3{
 		X: float64(screenWidth) / 2.0,
@@ -441,7 +468,56 @@ func PlayerInitFunc(world *Engine.World) {
 		Z: 100,
 	}
 
-	playerImageSize := world.Sprites[player.Entity].Tex.Bounds().Size()
+	world.AnimatedSprites[player.Entity] = &Engine.AnimatedSprite{
+		CurAnimationIndex:  0,
+		TotalNumAnimations: 0,
+		Animations:         make(map[int]*Engine.Animation),
+	}
+
+	playerAnimatedSprite := world.AnimatedSprites[player.Entity]
+	player.playerIdleAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+		"Assets/player/idle/player_idle_sheet.png",
+		22,
+		Engine.Vector2{X: 14, Y: 18},
+		true,
+		2.20,
+	)
+
+	player.playerRunAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+		"Assets/player/run/player_run_sheet.png",
+		8,
+		Engine.Vector2{X: 14, Y: 18},
+		true,
+		0.8,
+	)
+
+	player.playerJumpAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+		"Assets/player/jump/0.png",
+		1,
+		Engine.Vector2{X: 14, Y: 18},
+		true,
+		1000.0,
+	)
+
+	player.playerDashAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+		"Assets/player/slide/0.png",
+		1,
+		Engine.Vector2{X: 14, Y: 18},
+		true,
+		1000.0,
+	)
+
+	player.playerWallSlideAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+		"Assets/player/wall_slide/0.png",
+		1,
+		Engine.Vector2{X: 14, Y: 18},
+		true,
+		1000.0,
+	)
+
+	// playerAnimatedSprite.CurAnimationIndex = player.playerIdleAnimationIndex
+
+	playerImageSize := playerAnimatedSprite.Animations[player.playerIdleAnimationIndex].FrameSize
 	world.Transforms[player.Entity].Pivot = Engine.Vector2{
 		X: float64(playerImageSize.X) / 2.0,
 		Y: float64(playerImageSize.Y) / 2.0,
@@ -451,7 +527,7 @@ func PlayerInitFunc(world *Engine.World) {
 	physicsHeight := float64(playerImageSize.Y) * world.Transforms[player.Entity].Scale.Y
 
 	world.CharacterControllers[player.Entity] = &Engine.CharacterController{
-		Width:                     physicsWidth,
+		Width:                     physicsWidth / 1.50,
 		Height:                    physicsHeight,
 		Gravity:                   player.Gravity,
 		MoveSpeed:                 player.MoveSpeed,
@@ -496,6 +572,12 @@ func PlayerUpdateFunc(world *Engine.World, dt float64) {
 		cc.UpdateCharacter(player.Entity, world, world.Transforms[player.Entity], dt)
 
 		player.state.PostUpdate(player)
+
+		world.Transforms[player.Entity].Scale.X = math.Copysign(
+			math.Abs(world.Transforms[player.Entity].Scale.X),
+			float64(player.FacingDirection),
+		)
+
 	} else {
 		player.ForceEndAllTimers()
 		player.CC().Velocity = Engine.Vector2{}

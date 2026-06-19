@@ -8,13 +8,17 @@ type EntityInitFunc func(*World)
 type EntityUpdateFunc func(*World, float64)
 
 type World struct {
-	Names                map[Entity]*string
-	Transforms           map[Entity]*Transform
-	Sprites              map[Entity]*Sprite
+	Names map[Entity]*string
+
+	Transforms      map[Entity]*Transform
+	Sprites         map[Entity]*Sprite
+	AnimatedSprites map[Entity]*AnimatedSprite
+
 	CharacterControllers map[Entity]*CharacterController
 	Platforms            map[Entity]*Platform
 	Triggers             map[Entity]*Trigger
-	ParticleSystems      map[Entity]*ParticleSystem
+
+	ParticleSystems map[Entity]*ParticleSystem
 
 	Cameras map[Entity]*Camera
 
@@ -32,8 +36,9 @@ func NewWorld() *World {
 	world := World{
 		Names: make(map[Entity]*string),
 
-		Transforms: make(map[Entity]*Transform),
-		Sprites:    make(map[Entity]*Sprite),
+		Transforms:      make(map[Entity]*Transform),
+		Sprites:         make(map[Entity]*Sprite),
+		AnimatedSprites: make(map[Entity]*AnimatedSprite),
 
 		CharacterControllers: make(map[Entity]*CharacterController),
 		Platforms:            make(map[Entity]*Platform),

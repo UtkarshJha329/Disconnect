@@ -1,6 +1,8 @@
 package Engine
 
 import (
+	"image"
+
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -13,7 +15,16 @@ func (scene *Scene) RenderSceneHierarchy(cameraEntity Entity, world *World) {
 	for _, entity := range scene.EntitiesToDrawSorted {
 		op.GeoM = scene.world.Transforms[entity].WorldTransformMatrix
 		op.GeoM.Concat(*camera.GetCameraTransformMatrix(cameraEntity, world))
-		camera.RenderTexture.DrawImage(scene.world.Sprites[entity].Tex, op)
+
+		curSprite := scene.world.Sprites[entity]
+		camera.RenderTexture.DrawImage(
+			curSprite.Tex.SubImage(
+				image.Rect(
+					int(curSprite.FramePosition.X),
+					int(curSprite.FramePosition.Y),
+					int(curSprite.FramePosition.X+curSprite.FrameSize.X),
+					int(curSprite.FramePosition.Y+curSprite.FrameSize.Y))).(*ebiten.Image),
+			op)
 	}
 
 }

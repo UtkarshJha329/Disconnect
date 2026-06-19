@@ -130,6 +130,7 @@ func main() {
 		Project.MainCameraUpdateFunc,
 		Project.TriggersUpdateFunc,
 		Engine.ParticlesUpdateFunc,
+		Engine.AnimationEntityUpdateFunc,
 	)
 
 	for _, initFunc := range world.EntityInitfuncs {
