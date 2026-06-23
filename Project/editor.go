@@ -16,10 +16,10 @@ import (
 
 const (
 	EditorGridSize           = 20.0
-	EditorPlatformW          = 60.0
+	EditorPlatformW          = 20.0
 	EditorPlatformH          = 20.0
-	EditorTriggerW           = 32.0
-	EditorTriggerH           = 32.0
+	EditorTriggerW           = 20.0
+	EditorTriggerH           = 20.0
 	EditorVelocityStep       = 20.0
 	EditorVelocityArrowScale = 0.25
 	EditorVelocityArrowMax   = 60.0
@@ -476,7 +476,8 @@ type SerializableTrigger struct {
 }
 
 type SerializableCheckpoint struct {
-	X, Y float64
+	X, Y          float64
+	Width, Height float64
 }
 
 type SerializableLevel struct {
@@ -516,7 +517,13 @@ func SaveLevel(path string, world *Engine.World) error {
 
 	checkpoints := make([]SerializableCheckpoint, 0, len(world.Checkpoints))
 	for _, cp := range world.Checkpoints {
-		checkpoints = append(checkpoints, SerializableCheckpoint{X: cp.Position.X, Y: cp.Position.Y})
+		trigger := world.Triggers[cp.Entity]
+		checkpoints = append(checkpoints, SerializableCheckpoint{
+			X:      cp.Position.X,
+			Y:      cp.Position.Y,
+			Width:  trigger.AABB.Width,
+			Height: trigger.AABB.Height,
+		})
 	}
 
 	level := SerializableLevel{Platforms: platforms, Triggers: triggers, Checkpoints: checkpoints}
@@ -575,7 +582,7 @@ func LoadLevel(path string, world *Engine.World) error {
 	}
 
 	for _, scp := range level.Checkpoints {
-		e := world.CreateNewTriggerColliderInScene(&world.Scene, scp.X, scp.Y, EditorTriggerW, EditorTriggerH, Engine.DEFAULT, nil)
+		e := world.CreateNewTriggerColliderInScene(&world.Scene, scp.X, scp.Y, scp.Width, scp.Height, Engine.DEFAULT, nil)
 		SetupCheckpointCallback(world.Triggers[e], e)
 
 		world.Checkpoints[e] = &Engine.Checkpoint{
