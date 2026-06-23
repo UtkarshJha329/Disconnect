@@ -4,13 +4,8 @@ import (
 	"Disconnect/Engine"
 )
 
-// maxPlatformTimers is the upper bound on timer pool slots.
-// Each moving platform with VelTimerDuration > 0 uses one slot.
-// Stop-at-ends platforms use a second temporary slot per pause, so budget 2×.
 const maxPlatformTimers = 128
 
-// DefaultVelTimerStopDuration is the fallback pause length used when
-// VelTimerStopDuration is not set on the platform.
 const DefaultVelTimerStopDuration = 0.4
 
 var platformVelocityChangeTimer Engine.TimerSystem

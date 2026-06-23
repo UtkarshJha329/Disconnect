@@ -1,6 +1,19 @@
 {
   "platforms": [
     {
+      "X": 1340,
+      "Y": 260,
+      "Width": 160,
+      "Height": 80,
+      "Layer": 0,
+      "VelX": 600,
+      "VelY": 0,
+      "VelTimerDuration": 0.5,
+      "VelTimerStopAtEnds": false,
+      "VelTimerStopDuration": 0,
+      "VelTimerAxis": 0
+    },
+    {
       "X": 540,
       "Y": 460,
       "Width": 100,
@@ -14,36 +27,10 @@
       "VelTimerAxis": 0
     },
     {
-      "X": 660,
-      "Y": 340,
-      "Width": 60,
-      "Height": 20,
-      "Layer": 1,
-      "VelX": 0,
-      "VelY": 0,
-      "VelTimerDuration": 0,
-      "VelTimerStopAtEnds": false,
-      "VelTimerStopDuration": 0,
-      "VelTimerAxis": 0
-    },
-    {
       "X": 1280,
       "Y": 460,
       "Width": 640,
-      "Height": 580,
-      "Layer": 0,
-      "VelX": 0,
-      "VelY": 0,
-      "VelTimerDuration": 0,
-      "VelTimerStopAtEnds": false,
-      "VelTimerStopDuration": 0,
-      "VelTimerAxis": 0
-    },
-    {
-      "X": 640,
-      "Y": 460,
-      "Width": 640,
-      "Height": 580,
+      "Height": 540,
       "Layer": 0,
       "VelX": 0,
       "VelY": 0,
@@ -66,14 +53,53 @@
       "VelTimerAxis": 0
     },
     {
-      "X": 740,
-      "Y": 260,
-      "Width": 160,
-      "Height": 80,
-      "Layer": 0,
-      "VelX": 600,
+      "X": 1280,
+      "Y": 360,
+      "Width": 40,
+      "Height": 20,
+      "Layer": 1,
+      "VelX": 0,
       "VelY": 0,
-      "VelTimerDuration": 0.5,
+      "VelTimerDuration": 0,
+      "VelTimerStopAtEnds": false,
+      "VelTimerStopDuration": 0,
+      "VelTimerAxis": 0
+    },
+    {
+      "X": 1220,
+      "Y": 460,
+      "Width": 60,
+      "Height": 540,
+      "Layer": 0,
+      "VelX": 0,
+      "VelY": 0,
+      "VelTimerDuration": 0,
+      "VelTimerStopAtEnds": false,
+      "VelTimerStopDuration": 0,
+      "VelTimerAxis": 0
+    },
+    {
+      "X": 640,
+      "Y": 460,
+      "Width": 120,
+      "Height": 580,
+      "Layer": 0,
+      "VelX": 0,
+      "VelY": 0,
+      "VelTimerDuration": 0,
+      "VelTimerStopAtEnds": false,
+      "VelTimerStopDuration": 0,
+      "VelTimerAxis": 0
+    },
+    {
+      "X": 1920,
+      "Y": 460,
+      "Width": 640,
+      "Height": 540,
+      "Layer": 0,
+      "VelX": 0,
+      "VelY": 0,
+      "VelTimerDuration": 0,
       "VelTimerStopAtEnds": false,
       "VelTimerStopDuration": 0,
       "VelTimerAxis": 0
@@ -92,10 +118,10 @@
       "VelTimerAxis": 0
     },
     {
-      "X": 1920,
+      "X": 2560,
       "Y": 460,
       "Width": 640,
-      "Height": 580,
+      "Height": 540,
       "Layer": 0,
       "VelX": 0,
       "VelY": 0,
@@ -107,10 +133,10 @@
   ],
   "triggers": [
     {
-      "X": 1360,
-      "Y": 440,
-      "Width": 640,
-      "Height": 20,
+      "X": 760,
+      "Y": 460,
+      "Width": 460,
+      "Height": 540,
       "Layer": 0,
       "TriggerType": "kill"
     },
@@ -121,11 +147,19 @@
       "Height": 580,
       "Layer": 0,
       "TriggerType": "kill"
+    },
+    {
+      "X": 1980,
+      "Y": 440,
+      "Width": 640,
+      "Height": 20,
+      "Layer": 0,
+      "TriggerType": "kill"
     }
   ],
   "checkpoints": [
     {
-      "X": 2020,
+      "X": 1900,
       "Y": 420,
       "Width": 20,
       "Height": 40
@@ -138,6 +172,12 @@
     },
     {
       "X": 700,
+      "Y": 420,
+      "Width": 20,
+      "Height": 40
+    },
+    {
+      "X": 2660,
       "Y": 420,
       "Width": 20,
       "Height": 40
