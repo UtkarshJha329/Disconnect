@@ -52,9 +52,10 @@ type EditorState struct {
 	SelectionType  EditorSelectionType
 	SelectedEntity Engine.Entity
 	StatusMessage  string
+	ViewedRoom     Engine.Vector2
 }
 
-var Editor EditorState
+var Editor = EditorState{ViewedRoom: Engine.Vector2{X: 0, Y: 0}}
 
 // --- coordinate helpers ---
 
@@ -79,6 +80,25 @@ func pointInAABB(x, y float64, aabb *Engine.AABB) bool {
 
 func EditorUpdateFunc(world *Engine.World, dt float64) {
 	camera := world.Cameras[MainCameraEntity]
+
+	// Navigate rooms in editor using Numpad
+	if inpututil.IsKeyJustPressed(ebiten.KeyNumpad4) {
+		moveEditorRoom(world, -1, 0)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyNumpad6) {
+		moveEditorRoom(world, 1, 0)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyNumpad8) {
+		moveEditorRoom(world, 0, -1)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyNumpad2) {
+		moveEditorRoom(world, 0, 1)
+	}
+
+	// Snap editor camera to the viewed room exactly
+	targetX, targetY := Engine.GetRoomCameraPosition(Editor.ViewedRoom)
+	world.Transforms[MainCameraEntity].Position.X = targetX
+	world.Transforms[MainCameraEntity].Position.Y = targetY
 
 	mx, my := ebiten.CursorPosition()
 	worldMouse := ScreenToWorld(camera, MainCameraEntity, world, float64(mx), float64(my))
@@ -132,6 +152,13 @@ func EditorUpdateFunc(world *Engine.World, dt float64) {
 	handleSaveLoadInput(world, ctrlHeld)
 }
 
+func moveEditorRoom(world *Engine.World, dx, dy int) {
+	Editor.ViewedRoom.X += float64(dx)
+	Editor.ViewedRoom.Y += float64(dy)
+	Editor.HasSelection = false
+	Editor.StatusMessage = fmt.Sprintf("Viewing Room %.0f, %.0f", Editor.ViewedRoom.X, Editor.ViewedRoom.Y)
+}
+
 func handleEditorClick(world *Engine.World, worldMouse Engine.Vector2) {
 	// First check if clicking on existing entity (check triggers first since they overlay)
 	for e, trigger := range world.Triggers {
@@ -168,6 +195,7 @@ func handleEditorClick(world *Engine.World, worldMouse Engine.Vector2) {
 			EditorPlatformH,
 			Engine.DEFAULT,
 		)
+		world.Platforms[newEntity].RoomKey = Editor.ViewedRoom
 		Editor.SelectedEntity = newEntity
 		Editor.HasSelection = true
 		Editor.SelectionType = EditorSelectionPlatform
@@ -183,6 +211,7 @@ func handleEditorClick(world *Engine.World, worldMouse Engine.Vector2) {
 			Engine.DEFAULT,
 			nil,
 		)
+		world.Triggers[newEntity].RoomKey = Editor.ViewedRoom
 		SetupKillTriggerCallback(world.Triggers[newEntity])
 		Editor.SelectedEntity = newEntity
 		Editor.HasSelection = true
@@ -375,12 +404,14 @@ type SerializablePlatform struct {
 	VelTimerStopAtEnds   bool
 	VelTimerStopDuration float64
 	VelTimerAxis         int
+	RoomKey              Engine.Vector2
 }
 
 type SerializableTrigger struct {
 	X, Y, Width, Height float64
 	Layer               uint
 	TriggerType         string
+	RoomKey             Engine.Vector2
 }
 
 type SerializableLevel struct {
@@ -403,6 +434,7 @@ func SaveLevel(path string, world *Engine.World) error {
 			VelTimerStopAtEnds:   platform.VelTimerStopAtEnds,
 			VelTimerStopDuration: platform.VelTimerStopDuration,
 			VelTimerAxis:         platform.VelTimerAxis,
+			RoomKey:              platform.RoomKey,
 		})
 	}
 
@@ -415,6 +447,7 @@ func SaveLevel(path string, world *Engine.World) error {
 			Height:      trigger.AABB.Height,
 			Layer:       trigger.AABB.Layer,
 			TriggerType: trigger.TriggerType,
+			RoomKey:     trigger.RoomKey,
 		})
 	}
 
@@ -462,6 +495,7 @@ func LoadLevel(path string, world *Engine.World) error {
 		platform.VelTimerStopAtEnds = p.VelTimerStopAtEnds
 		platform.VelTimerStopDuration = p.VelTimerStopDuration
 		platform.VelTimerAxis = p.VelTimerAxis
+		platform.RoomKey = p.RoomKey
 		RegisterPlatformTimer(platform)
 	}
 
@@ -474,6 +508,7 @@ func LoadLevel(path string, world *Engine.World) error {
 		)
 		trigger := world.Triggers[e]
 		trigger.TriggerType = t.TriggerType
+		trigger.RoomKey = t.RoomKey
 
 		// Assign callback based on type
 		switch t.TriggerType {

@@ -122,8 +122,23 @@ func reverseVelocity(p *Engine.Platform) {
 }
 
 func PlatformsUpdateFunc(world *Engine.World, dt float64) {
-	platformVelocityChangeTimer.UpdateAllTimerDeltasAndStates(dt)
 	for e, platform := range world.Platforms {
+		inCurrentRoom := platform.RoomKey == world.CurrentRoom
+		timerItem := platform.VelTimerPoolItem()
+
+		if !inCurrentRoom {
+			if timerItem != nil && timerItem.Item.TimerState == Engine.TimerState_Running {
+				timerItem.Item.PauseTimer()
+			}
+			continue
+		} else {
+			if timerItem != nil && timerItem.Item.TimerState == Engine.TimerState_Paused {
+				timerItem.Item.UnPauseTimer()
+			}
+		}
+
 		platform.Move(e, platform.Velocity.X*dt, platform.Velocity.Y*dt, world)
 	}
+
+	platformVelocityChangeTimer.UpdateAllTimerDeltasAndStates(dt)
 }

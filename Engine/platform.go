@@ -10,6 +10,7 @@ type Platform struct {
 	Velocity   Vector2
 	Remainder  Vector2
 	Collidable bool
+	RoomKey    Vector2
 
 	// VelocityTimer configuration (set by editor / level loader)
 	VelTimerDuration     float64 // 0 = no timer
