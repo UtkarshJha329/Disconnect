@@ -9,6 +9,7 @@ import (
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
@@ -18,13 +19,21 @@ var world *Engine.World = Engine.NewWorld()
 
 func (g *Game) Update() error {
 	dt := 1.0 / float64(ebiten.TPS())
-	for _, updateFunc := range world.EntityUpdateFuncs {
-		updateFunc(world, dt)
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+		Project.Editor.Active = !Project.Editor.Active
+	}
+
+	if Project.Editor.Active {
+		Project.EditorUpdateFunc(world, dt)
+	} else {
+		for _, updateFunc := range world.EntityUpdateFuncs {
+			updateFunc(world, dt)
+		}
 	}
 
 	return nil
 }
-
 func (g *Game) Draw(screen *ebiten.Image) {
 
 	camera := world.Cameras[Project.MainCameraEntity]
@@ -87,6 +96,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			color.RGBA{0, 0, 255, 255},
 			false,
 		)
+	}
+
+	if Project.Editor.Active {
+		Project.EditorDrawFunc(camera, Project.MainCameraEntity, world)
 	}
 
 	cameras := make([]*Project.MainCameraEntityTransformPair, 0, len(world.Cameras))

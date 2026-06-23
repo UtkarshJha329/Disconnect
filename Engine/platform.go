@@ -10,7 +10,22 @@ type Platform struct {
 	Velocity   Vector2
 	Remainder  Vector2
 	Collidable bool
+
+	// VelocityTimer configuration (set by editor / level loader)
+	VelTimerDuration     float64 // 0 = no timer
+	VelTimerStopAtEnds   bool    // if true, platform pauses at each reversal
+	VelTimerStopDuration float64 // how long (seconds) to pause at each end; 0 = use default
+	VelTimerAxis         int     // 0 = X, 1 = Y, 2 = both
+
+	// Runtime – managed by PlatformsUpdateFunc, not serialised
+	velTimerPoolItem *PoolItem[Timer]
 }
+
+const (
+	VelTimerAxisX    = 0
+	VelTimerAxisY    = 1
+	VelTimerAxisBoth = 2
+)
 
 func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World) {
 	platform.Remainder.X += x
@@ -112,6 +127,16 @@ func (platform *Platform) Move(platformEntity Entity, x, y float64, world *World
 
 		platform.Collidable = true
 	}
+}
+
+// VelTimerPoolItem / SetVelTimerPoolItem expose the private runtime timer handle
+// to the Project package without leaking pool internals.
+func (platform *Platform) VelTimerPoolItem() *PoolItem[Timer] {
+	return platform.velTimerPoolItem
+}
+
+func (platform *Platform) SetVelTimerPoolItem(item *PoolItem[Timer]) {
+	platform.velTimerPoolItem = item
 }
 
 func (platform *Platform) GetAllRidingCharacterControllers(platformEntity Entity, world *World) map[Entity]struct{} {

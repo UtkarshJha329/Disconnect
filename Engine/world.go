@@ -7,6 +7,9 @@ import (
 type EntityInitFunc func(*World)
 type EntityUpdateFunc func(*World, float64)
 
+// WorldInstance is set during NewWorld so that callbacks can reference it.
+var WorldInstance *World
+
 type World struct {
 	Names map[Entity]*string
 
@@ -59,6 +62,7 @@ func NewWorld() *World {
 		EntitiesToDrawSorted: make([]Entity, 0),
 	}
 
+	WorldInstance = &world
 	return &world
 }
 
@@ -202,5 +206,41 @@ func (world *World) PerformTriggerCharacterColliderChecks() {
 			}
 
 		}
+	}
+}
+
+func (world *World) RemovePlatform(e Entity) {
+	delete(world.Platforms, e)
+	delete(world.Transforms, e)
+	delete(world.Alive, e)
+	delete(world.Children, e)
+
+	if parent, ok := world.Parents[e]; ok {
+		siblings := world.Children[parent]
+		for i, child := range siblings {
+			if child == e {
+				world.Children[parent] = append(siblings[:i], siblings[i+1:]...)
+				break
+			}
+		}
+		delete(world.Parents, e)
+	}
+}
+
+func (world *World) RemoveTrigger(e Entity) {
+	delete(world.Triggers, e)
+	delete(world.Transforms, e)
+	delete(world.Alive, e)
+	delete(world.Children, e)
+
+	if parent, ok := world.Parents[e]; ok {
+		siblings := world.Children[parent]
+		for i, child := range siblings {
+			if child == e {
+				world.Children[parent] = append(siblings[:i], siblings[i+1:]...)
+				break
+			}
+		}
+		delete(world.Parents, e)
 	}
 }
