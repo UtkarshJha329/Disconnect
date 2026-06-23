@@ -6,8 +6,17 @@ import (
 
 var playerRespawnTimerSystem Engine.TimerSystem
 
-// SetupKillTriggerCallback assigns the kill-player behavior to a trigger.
-// Call this after creating or loading a trigger that should kill on contact.
+func SetupCheckpointCallback(trigger *Engine.Trigger, triggerEntity Engine.Entity) {
+	trigger.TriggerType = "checkpoint"
+	trigger.OnCollision = func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
+		if colliderEntity == player.Entity {
+			if cp, exists := Engine.WorldInstance.Checkpoints[triggerEntity]; exists {
+				cp.Activated = true
+			}
+		}
+	}
+}
+
 func SetupKillTriggerCallback(trigger *Engine.Trigger) {
 	trigger.TriggerType = "kill"
 	trigger.OnCollision = func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
@@ -18,14 +27,22 @@ func SetupKillTriggerCallback(trigger *Engine.Trigger) {
 			ps.SpawnBurst(Engine.WorldInstance, 40, &CelesteDeathConfig)
 			ps.SpawnBurst(Engine.WorldInstance, 15, &CelesteDeathSparkConfig)
 
+			var respawnPos Engine.Vector2 = Engine.Vector2{X: 320.0, Y: 240.0}
+			for _, cp := range Engine.WorldInstance.Checkpoints {
+				if cp.Activated {
+					respawnPos = cp.Position
+				}
+			}
+
 			playerRespawnTimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(
 				2.0,
 				false,
 				func() {
-					mainCamera := Engine.WorldInstance.Cameras[MainCameraEntity]
-
-					newPlayerPos := mainCamera.GetScreenCenterInWorld(MainCameraEntity, Engine.WorldInstance)
-					Engine.WorldInstance.Transforms[colliderEntity].Position = Engine.Vector3{X: newPlayerPos.X, Y: newPlayerPos.Y, Z: Engine.WorldInstance.Transforms[colliderEntity].Position.Z}
+					Engine.WorldInstance.Transforms[colliderEntity].Position = Engine.Vector3{
+						X: respawnPos.X,
+						Y: respawnPos.Y,
+						Z: Engine.WorldInstance.Transforms[colliderEntity].Position.Z,
+					}
 					Engine.WorldInstance.SetEntityAlive(colliderEntity)
 				},
 			)
@@ -43,7 +60,7 @@ func TriggersInitFunc(world *Engine.World) {
 		32.0,
 		32.0,
 		Engine.DEFAULT,
-		nil, // callback set below
+		nil,
 	)
 	SetupKillTriggerCallback(world.Triggers[triggerEntity])
 }

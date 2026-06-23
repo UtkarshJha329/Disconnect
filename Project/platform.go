@@ -38,6 +38,12 @@ func PlatformsInitFunc(world *Engine.World) {
 	world.Platforms[platform4Index].VelTimerStopAtEnds = false
 	world.Platforms[platform4Index].VelTimerAxis = Engine.VelTimerAxisY
 	RegisterPlatformTimer(world.Platforms[platform4Index])
+
+	world.Platforms[platform4Index].StartX = 100.0
+	world.Platforms[platform4Index].StartY = 200.0
+	world.Platforms[platform4Index].StartVelX = 0.0
+	world.Platforms[platform4Index].StartVelY = -400.0
+	RegisterPlatformTimer(world.Platforms[platform4Index])
 }
 
 // RegisterPlatformTimer wires up a velocity-reversal timer for p.
@@ -122,23 +128,8 @@ func reverseVelocity(p *Engine.Platform) {
 }
 
 func PlatformsUpdateFunc(world *Engine.World, dt float64) {
+	platformVelocityChangeTimer.UpdateAllTimerDeltasAndStates(dt)
 	for e, platform := range world.Platforms {
-		inCurrentRoom := platform.RoomKey == world.CurrentRoom
-		timerItem := platform.VelTimerPoolItem()
-
-		if !inCurrentRoom {
-			if timerItem != nil && timerItem.Item.TimerState == Engine.TimerState_Running {
-				timerItem.Item.PauseTimer()
-			}
-			continue
-		} else {
-			if timerItem != nil && timerItem.Item.TimerState == Engine.TimerState_Paused {
-				timerItem.Item.UnPauseTimer()
-			}
-		}
-
 		platform.Move(e, platform.Velocity.X*dt, platform.Velocity.Y*dt, world)
 	}
-
-	platformVelocityChangeTimer.UpdateAllTimerDeltasAndStates(dt)
 }

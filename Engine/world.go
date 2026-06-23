@@ -1,8 +1,6 @@
 package Engine
 
 import (
-	"math"
-
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -21,6 +19,7 @@ type World struct {
 	CharacterControllers map[Entity]*CharacterController
 	Platforms            map[Entity]*Platform
 	Triggers             map[Entity]*Trigger
+	Checkpoints          map[Entity]*Checkpoint // Changed from map[Vector2] to map[Entity]
 
 	ParticleSystems map[Entity]*ParticleSystem
 
@@ -30,29 +29,9 @@ type World struct {
 	Children map[Entity][]Entity
 	Alive    map[Entity]bool
 
-	CurrentRoom Vector2 // NEW: Tracks the active room as a Vector2
-
 	Scene             Scene
 	EntityInitfuncs   []EntityInitFunc
 	EntityUpdateFuncs []EntityUpdateFunc
-}
-
-const (
-	RoomWidth  = 640.0
-	RoomHeight = 480.0
-)
-
-// GetRoomKeyFromPosition converts world X,Y coordinates to a Vector2 room key.
-func GetRoomKeyFromPosition(x, y float64) Vector2 {
-	return Vector2{
-		X: math.Floor(x / RoomWidth),
-		Y: math.Floor(y / RoomHeight),
-	}
-}
-
-// GetRoomCameraPosition returns the exact world X,Y the camera needs to be at to center on a room.
-func GetRoomCameraPosition(roomKey Vector2) (float64, float64) {
-	return roomKey.X*RoomWidth + RoomWidth/2.0, roomKey.Y*RoomHeight + RoomHeight/2.0
 }
 
 func NewWorld() *World {
@@ -66,6 +45,7 @@ func NewWorld() *World {
 		CharacterControllers: make(map[Entity]*CharacterController),
 		Platforms:            make(map[Entity]*Platform),
 		Triggers:             make(map[Entity]*Trigger),
+		Checkpoints:          make(map[Entity]*Checkpoint),
 
 		ParticleSystems: make(map[Entity]*ParticleSystem),
 
@@ -74,8 +54,6 @@ func NewWorld() *World {
 		Parents:  make(map[Entity]Entity),
 		Children: make(map[Entity][]Entity),
 		Alive:    make(map[Entity]bool),
-
-		CurrentRoom: Vector2{X: 0, Y: 0}, // Start in room 0,0
 	}
 
 	world.Scene = Scene{
@@ -212,10 +190,6 @@ func (world *World) NewCameraInScene(scene *Scene, ScreenWidth, ScreenHeight flo
 func (world *World) PerformTriggerCharacterColliderChecks() {
 
 	for triggerEntity, trigger := range world.Triggers {
-
-		if trigger.RoomKey != world.CurrentRoom {
-			continue
-		}
 
 		if !world.Alive[triggerEntity] || !trigger.Collidable {
 			continue

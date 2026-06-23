@@ -10,15 +10,17 @@ type Platform struct {
 	Velocity   Vector2
 	Remainder  Vector2
 	Collidable bool
-	RoomKey    Vector2
 
-	// VelocityTimer configuration (set by editor / level loader)
-	VelTimerDuration     float64 // 0 = no timer
-	VelTimerStopAtEnds   bool    // if true, platform pauses at each reversal
-	VelTimerStopDuration float64 // how long (seconds) to pause at each end; 0 = use default
-	VelTimerAxis         int     // 0 = X, 1 = Y, 2 = both
+	StartX    float64
+	StartY    float64
+	StartVelX float64
+	StartVelY float64
 
-	// Runtime – managed by PlatformsUpdateFunc, not serialised
+	VelTimerDuration     float64
+	VelTimerStopAtEnds   bool
+	VelTimerStopDuration float64
+	VelTimerAxis         int
+
 	velTimerPoolItem *PoolItem[Timer]
 }
 

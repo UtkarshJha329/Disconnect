@@ -79,6 +79,48 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		)
 	}
 
+	for _, cp := range world.Checkpoints {
+
+		trigger := world.Triggers[cp.Entity]
+		aabb := trigger.AABB
+		x, y := cameraMatrix.Apply(aabb.X, aabb.Y)
+
+		// Determine colors based on activation state
+		poleColor := color.RGBA{R: 180, G: 140, B: 0, A: 255}
+		foldColor := color.RGBA{R: 200, G: 200, B: 0, A: 180}
+
+		var flagFillColor color.RGBA
+		var flagOutlineColor color.RGBA
+		if cp.Activated {
+			flagFillColor = color.RGBA{R: 255, G: 255, B: 0, A: 255} // Bright solid yellow
+			flagOutlineColor = color.RGBA{R: 255, G: 255, B: 150, A: 255}
+		} else {
+			flagFillColor = color.RGBA{R: 200, G: 200, B: 0, A: 150} // Dimmer/more transparent yellow
+			flagOutlineColor = color.RGBA{R: 200, G: 200, B: 0, A: 200}
+		}
+
+		// --- Draw Fancy Rectangle Flag ---
+		poleX := float32(x + 8)
+		poleTop := float32(y + 2)
+		poleBottom := float32(y + aabb.Height - 2) // Reaches the ground
+
+		// 1. Pole
+		vector.StrokeLine(camera.RenderTexture, poleX, poleTop, poleX, poleBottom, 2, poleColor, false)
+
+		// 2. Flag body (Rectangle at the top of the pole)
+		flagX := poleX
+		flagY := poleTop
+		flagW := float32(20)
+		flagH := float32(10)
+
+		vector.FillRect(camera.RenderTexture, flagX, flagY, flagW, flagH, flagFillColor, false)
+		vector.StrokeRect(camera.RenderTexture, flagX, flagY, flagW, flagH, 2, flagOutlineColor, false)
+
+		// 3. Fancy details (Fabric fold lines)
+		vector.StrokeLine(camera.RenderTexture, flagX+flagW/2, flagY, flagX+flagW/2, flagY+flagH, 1, foldColor, false)
+		vector.StrokeLine(camera.RenderTexture, flagX, flagY+flagH/2, flagX+flagW, flagY+flagH, 1, foldColor, false)
+	}
+
 	for e, cc := range world.CharacterControllers {
 
 		x, y := cameraMatrix.Apply(

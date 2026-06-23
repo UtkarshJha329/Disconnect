@@ -156,10 +156,6 @@ func (cc *CharacterController) CollidesWithObstaclesAtPositionHorizontally(chara
 
 	for e, platform := range world.Platforms {
 
-		if platform.RoomKey != world.CurrentRoom {
-			continue
-		}
-
 		if !platform.Collidable || !AABBOverlap(*characterCollider, *platform.AABB) {
 			continue
 		}
@@ -179,10 +175,6 @@ func (cc *CharacterController) CollidesWithObstaclesAtPositionHorizontally(chara
 func (cc *CharacterController) CollidesWithObstaclesAtPositionVertically(characterCollider *AABB, direction float64, world *World) *CollisionResult {
 
 	for e, platform := range world.Platforms {
-
-		if platform.RoomKey != world.CurrentRoom {
-			continue
-		}
 
 		if !platform.Collidable || !AABBOverlap(*characterCollider, *platform.AABB) {
 			continue

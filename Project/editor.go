@@ -35,6 +35,7 @@ type EditorMode int
 const (
 	EditorModePlatform EditorMode = iota
 	EditorModeTrigger
+	EditorModeCheckpoint
 )
 
 type EditorSelectionType int
@@ -43,6 +44,7 @@ const (
 	EditorSelectionNone EditorSelectionType = iota
 	EditorSelectionPlatform
 	EditorSelectionTrigger
+	EditorSelectionCheckpoint
 )
 
 type EditorState struct {
@@ -56,6 +58,11 @@ type EditorState struct {
 }
 
 var Editor = EditorState{ViewedRoom: Engine.Vector2{X: 0, Y: 0}}
+var (
+	editorIsPanning  bool
+	editorLastMouseX int
+	editorLastMouseY int
+)
 
 // --- coordinate helpers ---
 
@@ -77,33 +84,46 @@ func pointInAABB(x, y float64, aabb *Engine.AABB) bool {
 }
 
 // --- update ---
-
 func EditorUpdateFunc(world *Engine.World, dt float64) {
+
 	camera := world.Cameras[MainCameraEntity]
 
-	// Navigate rooms in editor using Numpad
-	if inpututil.IsKeyJustPressed(ebiten.KeyNumpad4) {
-		moveEditorRoom(world, -1, 0)
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyNumpad6) {
-		moveEditorRoom(world, 1, 0)
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyNumpad8) {
-		moveEditorRoom(world, 0, -1)
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyNumpad2) {
-		moveEditorRoom(world, 0, 1)
-	}
-
-	// Snap editor camera to the viewed room exactly
-	targetX, targetY := Engine.GetRoomCameraPosition(Editor.ViewedRoom)
-	world.Transforms[MainCameraEntity].Position.X = targetX
-	world.Transforms[MainCameraEntity].Position.Y = targetY
-
 	mx, my := ebiten.CursorPosition()
+
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) {
+		if !editorIsPanning {
+			editorIsPanning = true
+			editorLastMouseX, editorLastMouseY = mx, my
+		} else {
+			dx := float64(mx - editorLastMouseX)
+			dy := float64(my - editorLastMouseY)
+
+			world.Transforms[MainCameraEntity].Position.X -= dx
+			world.Transforms[MainCameraEntity].Position.Y -= dy
+
+			editorLastMouseX, editorLastMouseY = mx, my
+		}
+	} else {
+		editorIsPanning = false
+	}
+
+	panSpeed := 500.0 * dt
+	if ebiten.IsKeyPressed(ebiten.KeyNumpad8) {
+		world.Transforms[MainCameraEntity].Position.Y -= panSpeed
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyNumpad2) {
+		world.Transforms[MainCameraEntity].Position.Y += panSpeed
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyNumpad4) {
+		world.Transforms[MainCameraEntity].Position.X -= panSpeed
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyNumpad6) {
+		world.Transforms[MainCameraEntity].Position.X += panSpeed
+	}
+	// ---------------------------
+
 	worldMouse := ScreenToWorld(camera, MainCameraEntity, world, float64(mx), float64(my))
 
-	// Mode switching
 	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
 		Editor.Mode = EditorModePlatform
 		Editor.StatusMessage = "Mode: Platform"
@@ -112,12 +132,15 @@ func EditorUpdateFunc(world *Engine.World, dt float64) {
 		Editor.Mode = EditorModeTrigger
 		Editor.StatusMessage = "Mode: Kill Trigger"
 	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyC) {
+		Editor.Mode = EditorModeCheckpoint
+		Editor.StatusMessage = "Mode: Checkpoint"
+	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		handleEditorClick(world, worldMouse)
 	}
 
-	// Validate selection still exists
 	if Editor.HasSelection {
 		switch Editor.SelectionType {
 		case EditorSelectionPlatform:
@@ -127,6 +150,11 @@ func EditorUpdateFunc(world *Engine.World, dt float64) {
 			}
 		case EditorSelectionTrigger:
 			if _, ok := world.Triggers[Editor.SelectedEntity]; !ok {
+				Editor.HasSelection = false
+				Editor.SelectionType = EditorSelectionNone
+			}
+		case EditorSelectionCheckpoint:
+			if _, ok := world.Checkpoints[Editor.SelectedEntity]; !ok {
 				Editor.HasSelection = false
 				Editor.SelectionType = EditorSelectionNone
 			}
@@ -140,10 +168,13 @@ func EditorUpdateFunc(world *Engine.World, dt float64) {
 		case EditorSelectionPlatform:
 			if !ctrlHeld {
 				handleResizeInput(world)
+				handleLayerInput(world)
 			}
 			handleVelocityInput(world)
 			handleTimerInput(world)
 		case EditorSelectionTrigger:
+			handleTriggerResizeInput(world)
+		case EditorSelectionCheckpoint:
 			handleTriggerResizeInput(world)
 		}
 		handleDeleteInput(world)
@@ -160,7 +191,16 @@ func moveEditorRoom(world *Engine.World, dx, dy int) {
 }
 
 func handleEditorClick(world *Engine.World, worldMouse Engine.Vector2) {
-	// First check if clicking on existing entity (check triggers first since they overlay)
+	for _, cp := range world.Checkpoints {
+		if pointInAABB(worldMouse.X, worldMouse.Y, world.Triggers[cp.Entity].AABB) {
+			Editor.SelectedEntity = cp.Entity
+			Editor.HasSelection = true
+			Editor.SelectionType = EditorSelectionCheckpoint
+			Editor.StatusMessage = "Selected checkpoint"
+			return
+		}
+	}
+
 	for e, trigger := range world.Triggers {
 		if pointInAABB(worldMouse.X, worldMouse.Y, trigger.AABB) {
 			Editor.SelectedEntity = e
@@ -181,42 +221,43 @@ func handleEditorClick(world *Engine.World, worldMouse Engine.Vector2) {
 		}
 	}
 
-	// Place new entity based on mode
 	snappedX := SnapToGrid(worldMouse.X)
 	snappedY := SnapToGrid(worldMouse.Y)
 
 	switch Editor.Mode {
 	case EditorModePlatform:
-		newEntity := world.CreateNewLevelColliderInScene(
-			&world.Scene,
-			snappedX,
-			snappedY,
-			EditorPlatformW,
-			EditorPlatformH,
-			Engine.DEFAULT,
-		)
-		world.Platforms[newEntity].RoomKey = Editor.ViewedRoom
+		newEntity := world.CreateNewLevelColliderInScene(&world.Scene, snappedX, snappedY, EditorPlatformW, EditorPlatformH, Engine.DEFAULT)
 		Editor.SelectedEntity = newEntity
 		Editor.HasSelection = true
 		Editor.SelectionType = EditorSelectionPlatform
 		Editor.StatusMessage = "Placed new platform"
 
+		world.Platforms[newEntity].StartX = snappedX
+		world.Platforms[newEntity].StartY = snappedY
+		world.Platforms[newEntity].StartVelX = 0.0
+		world.Platforms[newEntity].StartVelY = 0.0
+
 	case EditorModeTrigger:
-		newEntity := world.CreateNewTriggerColliderInScene(
-			&world.Scene,
-			snappedX,
-			snappedY,
-			EditorTriggerW,
-			EditorTriggerH,
-			Engine.DEFAULT,
-			nil,
-		)
-		world.Triggers[newEntity].RoomKey = Editor.ViewedRoom
+		newEntity := world.CreateNewTriggerColliderInScene(&world.Scene, snappedX, snappedY, EditorTriggerW, EditorTriggerH, Engine.DEFAULT, nil)
 		SetupKillTriggerCallback(world.Triggers[newEntity])
 		Editor.SelectedEntity = newEntity
 		Editor.HasSelection = true
 		Editor.SelectionType = EditorSelectionTrigger
 		Editor.StatusMessage = "Placed kill trigger"
+
+	case EditorModeCheckpoint:
+		newEntity := world.CreateNewTriggerColliderInScene(&world.Scene, snappedX, snappedY, EditorTriggerW, EditorTriggerH, Engine.DEFAULT, nil)
+		SetupCheckpointCallback(world.Triggers[newEntity], newEntity)
+
+		world.Checkpoints[newEntity] = &Engine.Checkpoint{
+			Entity:    newEntity,
+			Position:  Engine.Vector2{X: snappedX, Y: snappedY},
+			Activated: false,
+		}
+		Editor.SelectedEntity = newEntity
+		Editor.HasSelection = true
+		Editor.SelectionType = EditorSelectionCheckpoint
+		Editor.StatusMessage = "Placed checkpoint"
 	}
 }
 
@@ -259,15 +300,33 @@ func handleVelocityInput(world *Engine.World) {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowRight) {
 		platform.Velocity.X += EditorVelocityStep
+		platform.StartVelX = platform.Velocity.X
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowLeft) {
 		platform.Velocity.X -= EditorVelocityStep
+		platform.StartVelX = platform.Velocity.X
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
 		platform.Velocity.Y += EditorVelocityStep
+		platform.StartVelY = platform.Velocity.Y
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
 		platform.Velocity.Y -= EditorVelocityStep
+		platform.StartVelY = platform.Velocity.Y
+	}
+}
+
+func handleLayerInput(world *Engine.World) {
+	if inpututil.IsKeyJustPressed(ebiten.KeyO) {
+		platform := world.Platforms[Editor.SelectedEntity]
+
+		if platform.AABB.Layer == Engine.DEFAULT {
+			platform.AABB.Layer = Engine.ONE_WAY_PLATFORMS
+			Editor.StatusMessage = "Platform type: One-Way"
+		} else {
+			platform.AABB.Layer = Engine.DEFAULT
+			Editor.StatusMessage = "Platform type: Solid"
+		}
 	}
 }
 
@@ -368,6 +427,10 @@ func handleDeleteInput(world *Engine.World) {
 		case EditorSelectionTrigger:
 			world.RemoveTrigger(Editor.SelectedEntity)
 			Editor.StatusMessage = "Deleted trigger"
+		case EditorSelectionCheckpoint:
+			delete(world.Checkpoints, Editor.SelectedEntity)
+			world.RemoveTrigger(Editor.SelectedEntity)
+			Editor.StatusMessage = "Deleted checkpoint"
 		}
 		Editor.HasSelection = false
 		Editor.SelectionType = EditorSelectionNone
@@ -404,63 +467,63 @@ type SerializablePlatform struct {
 	VelTimerStopAtEnds   bool
 	VelTimerStopDuration float64
 	VelTimerAxis         int
-	RoomKey              Engine.Vector2
 }
 
 type SerializableTrigger struct {
 	X, Y, Width, Height float64
 	Layer               uint
 	TriggerType         string
-	RoomKey             Engine.Vector2
+}
+
+type SerializableCheckpoint struct {
+	X, Y float64
 }
 
 type SerializableLevel struct {
-	Platforms []SerializablePlatform `json:"platforms"`
-	Triggers  []SerializableTrigger  `json:"triggers"`
+	Platforms   []SerializablePlatform   `json:"platforms"`
+	Triggers    []SerializableTrigger    `json:"triggers"`
+	Checkpoints []SerializableCheckpoint `json:"checkpoints"`
 }
 
 func SaveLevel(path string, world *Engine.World) error {
 	platforms := make([]SerializablePlatform, 0, len(world.Platforms))
 	for _, platform := range world.Platforms {
 		platforms = append(platforms, SerializablePlatform{
-			X:                    platform.AABB.X,
-			Y:                    platform.AABB.Y,
+			X:                    platform.StartX,
+			Y:                    platform.StartY,
 			Width:                platform.AABB.Width,
 			Height:               platform.AABB.Height,
 			Layer:                platform.AABB.Layer,
-			VelX:                 platform.Velocity.X,
-			VelY:                 platform.Velocity.Y,
+			VelX:                 platform.StartVelX,
+			VelY:                 platform.StartVelY,
 			VelTimerDuration:     platform.VelTimerDuration,
 			VelTimerStopAtEnds:   platform.VelTimerStopAtEnds,
 			VelTimerStopDuration: platform.VelTimerStopDuration,
 			VelTimerAxis:         platform.VelTimerAxis,
-			RoomKey:              platform.RoomKey,
 		})
 	}
 
 	triggers := make([]SerializableTrigger, 0, len(world.Triggers))
 	for _, trigger := range world.Triggers {
+		if trigger.TriggerType == "checkpoint" {
+			continue
+		}
 		triggers = append(triggers, SerializableTrigger{
-			X:           trigger.AABB.X,
-			Y:           trigger.AABB.Y,
-			Width:       trigger.AABB.Width,
-			Height:      trigger.AABB.Height,
-			Layer:       trigger.AABB.Layer,
-			TriggerType: trigger.TriggerType,
-			RoomKey:     trigger.RoomKey,
+			X: trigger.AABB.X, Y: trigger.AABB.Y, Width: trigger.AABB.Width, Height: trigger.AABB.Height,
+			Layer: trigger.AABB.Layer, TriggerType: trigger.TriggerType,
 		})
 	}
 
-	level := SerializableLevel{
-		Platforms: platforms,
-		Triggers:  triggers,
+	checkpoints := make([]SerializableCheckpoint, 0, len(world.Checkpoints))
+	for _, cp := range world.Checkpoints {
+		checkpoints = append(checkpoints, SerializableCheckpoint{X: cp.Position.X, Y: cp.Position.Y})
 	}
 
+	level := SerializableLevel{Platforms: platforms, Triggers: triggers, Checkpoints: checkpoints}
 	data, err := json.MarshalIndent(level, "", "  ")
 	if err != nil {
 		return err
 	}
-
 	return os.WriteFile(path, data, 0644)
 }
 
@@ -475,45 +538,50 @@ func LoadLevel(path string, world *Engine.World) error {
 		return err
 	}
 
-	// Clear existing platforms
 	for e := range world.Platforms {
 		world.RemovePlatform(e)
 	}
-
-	// Clear existing triggers (except those created in InitFuncs)
-	// We'll track which triggers are from the level file
 	for e := range world.Triggers {
 		world.RemoveTrigger(e)
 	}
+	world.Checkpoints = make(map[Engine.Entity]*Engine.Checkpoint)
 
-	// Load platforms
 	for _, p := range level.Platforms {
 		e := world.CreateNewLevelColliderInScene(&world.Scene, p.X, p.Y, p.Width, p.Height, p.Layer)
 		platform := world.Platforms[e]
+
 		platform.Velocity = Engine.Vector2{X: p.VelX, Y: p.VelY}
+
+		platform.StartX = p.X
+		platform.StartY = p.Y
+		platform.StartVelX = p.VelX
+		platform.StartVelY = p.VelY
+
 		platform.VelTimerDuration = p.VelTimerDuration
 		platform.VelTimerStopAtEnds = p.VelTimerStopAtEnds
 		platform.VelTimerStopDuration = p.VelTimerStopDuration
 		platform.VelTimerAxis = p.VelTimerAxis
-		platform.RoomKey = p.RoomKey
 		RegisterPlatformTimer(platform)
 	}
 
-	// Load triggers
 	for _, t := range level.Triggers {
-		e := world.CreateNewTriggerColliderInScene(
-			&world.Scene,
-			t.X, t.Y, t.Width, t.Height, t.Layer,
-			nil,
-		)
+		e := world.CreateNewTriggerColliderInScene(&world.Scene, t.X, t.Y, t.Width, t.Height, t.Layer, nil)
 		trigger := world.Triggers[e]
 		trigger.TriggerType = t.TriggerType
-		trigger.RoomKey = t.RoomKey
-
-		// Assign callback based on type
 		switch t.TriggerType {
 		case "kill":
 			SetupKillTriggerCallback(trigger)
+		}
+	}
+
+	for _, scp := range level.Checkpoints {
+		e := world.CreateNewTriggerColliderInScene(&world.Scene, scp.X, scp.Y, EditorTriggerW, EditorTriggerH, Engine.DEFAULT, nil)
+		SetupCheckpointCallback(world.Triggers[e], e)
+
+		world.Checkpoints[e] = &Engine.Checkpoint{
+			Entity:    e,
+			Position:  Engine.Vector2{X: scp.X, Y: scp.Y},
+			Activated: false,
 		}
 	}
 
@@ -528,6 +596,7 @@ func EditorDrawFunc(camera *Engine.Camera, cameraEntity Engine.Entity, world *En
 	drawEditorGrid(camera, cameraMatrix)
 	drawPlacementPreview(camera, cameraEntity, world, cameraMatrix)
 	drawAllTriggersInEditor(camera, cameraMatrix, world)
+	drawCheckpointsInEditor(camera, cameraMatrix, world)
 
 	if Editor.HasSelection {
 		switch Editor.SelectionType {
@@ -540,6 +609,10 @@ func EditorDrawFunc(camera *Engine.Camera, cameraEntity Engine.Entity, world *En
 		case EditorSelectionTrigger:
 			if trigger, ok := world.Triggers[Editor.SelectedEntity]; ok {
 				drawSelectionHighlight(camera, cameraMatrix, trigger.AABB, color.RGBA{R: 255, G: 100, B: 255, A: 255})
+			}
+		case EditorSelectionCheckpoint:
+			if trigger, ok := world.Triggers[Editor.SelectedEntity]; ok {
+				drawSelectionHighlight(camera, cameraMatrix, trigger.AABB, color.RGBA{R: 255, G: 255, B: 100, A: 255})
 			}
 		}
 	}
@@ -580,7 +653,6 @@ func drawPlacementPreview(camera *Engine.Camera, cameraEntity Engine.Entity, wor
 	mx, my := ebiten.CursorPosition()
 	worldMouse := ScreenToWorld(camera, cameraEntity, world, float64(mx), float64(my))
 
-	// Don't show preview if hovering over existing entity
 	for _, trigger := range world.Triggers {
 		if pointInAABB(worldMouse.X, worldMouse.Y, trigger.AABB) {
 			return
@@ -601,23 +673,17 @@ func drawPlacementPreview(camera *Engine.Camera, cameraEntity Engine.Entity, wor
 
 	switch Editor.Mode {
 	case EditorModePlatform:
-		previewW = EditorPlatformW
-		previewH = EditorPlatformH
+		previewW, previewH = EditorPlatformW, EditorPlatformH
 		previewColor = color.RGBA{R: 255, G: 255, B: 255, A: 150}
 	case EditorModeTrigger:
-		previewW = EditorTriggerW
-		previewH = EditorTriggerH
+		previewW, previewH = EditorTriggerW, EditorTriggerH
 		previewColor = color.RGBA{R: 255, G: 80, B: 80, A: 150}
+	case EditorModeCheckpoint: // NEW
+		previewW, previewH = EditorTriggerW, EditorTriggerH
+		previewColor = color.RGBA{R: 255, G: 255, B: 0, A: 150}
 	}
 
-	vector.StrokeRect(
-		camera.RenderTexture,
-		float32(sx), float32(sy),
-		float32(previewW), float32(previewH),
-		1,
-		previewColor,
-		false,
-	)
+	vector.StrokeRect(camera.RenderTexture, float32(sx), float32(sy), float32(previewW), float32(previewH), 1, previewColor, false)
 }
 
 func drawAllTriggersInEditor(camera *Engine.Camera, cameraMatrix *ebiten.GeoM, world *Engine.World) {
@@ -661,6 +727,39 @@ func drawAllTriggersInEditor(camera *Engine.Camera, cameraMatrix *ebiten.GeoM, w
 			color.RGBA{R: 255, G: 0, B: 0, A: 120},
 			false,
 		)
+	}
+}
+
+func drawCheckpointsInEditor(camera *Engine.Camera, cameraMatrix *ebiten.GeoM, world *Engine.World) {
+	for _, cp := range world.Checkpoints {
+		trigger := world.Triggers[cp.Entity]
+		aabb := trigger.AABB
+		x, y := cameraMatrix.Apply(aabb.X, aabb.Y)
+
+		vector.FillRect(camera.RenderTexture, float32(x), float32(y), float32(aabb.Width), float32(aabb.Height), color.RGBA{R: 255, G: 255, B: 0, A: 40}, false)
+		vector.StrokeRect(camera.RenderTexture, float32(x), float32(y), float32(aabb.Width), float32(aabb.Height), 1, color.RGBA{R: 255, G: 255, B: 0, A: 100}, false)
+
+		poleColor := color.RGBA{R: 180, G: 140, B: 0, A: 255}
+		flagFillColor := color.RGBA{R: 255, G: 255, B: 0, A: 220}
+		flagOutlineColor := color.RGBA{R: 255, G: 255, B: 100, A: 255}
+		foldColor := color.RGBA{R: 200, G: 200, B: 0, A: 180}
+
+		poleX := float32(x + 8)
+		poleTop := float32(y + 2)
+		poleBottom := float32(y + aabb.Height - 2)
+
+		vector.StrokeLine(camera.RenderTexture, poleX, poleTop, poleX, poleBottom, 2, poleColor, false)
+
+		flagX := poleX
+		flagY := poleTop
+		flagW := float32(20)
+		flagH := float32(10)
+
+		vector.FillRect(camera.RenderTexture, flagX, flagY, flagW, flagH, flagFillColor, false)
+		vector.StrokeRect(camera.RenderTexture, flagX, flagY, flagW, flagH, 2, flagOutlineColor, false)
+
+		vector.StrokeLine(camera.RenderTexture, flagX+flagW/2, flagY, flagX+flagW/2, flagY+flagH, 1, foldColor, false)
+		vector.StrokeLine(camera.RenderTexture, flagX, flagY+flagH/2, flagX+flagW, flagY+flagH, 1, foldColor, false)
 	}
 }
 
@@ -781,15 +880,21 @@ func drawEditorHUD(world *Engine.World) {
 	if Editor.Mode == EditorModeTrigger {
 		modeStr = "KILL TRIGGER"
 	}
+	if Editor.Mode == EditorModeCheckpoint {
+		modeStr = "CHECKPOINT"
+	}
 
 	lines := fmt.Sprintf("EDITOR MODE (Tab to exit)\n"+
-		"Current: %s [P/K to switch]\n"+
+		"Current: %s [P/K/C to switch]\n"+
 		"Click: place/select\n"+
-		"W/S height, A/D width\n",
+		"W/S height, A/D width\n"+
+		"Right-Click Drag: Pan camera\n"+
+		"Numpad Arrows: Pan camera\n",
 		modeStr)
 
 	if Editor.Mode == EditorModePlatform {
-		lines += "Arrows: nudge velocity\n" +
+		lines += "O: toggle one-way/solid\n" +
+			"Arrows: nudge velocity\n" +
 			"[ / ]: timer duration -/+\n" +
 			"Shift+[ / Shift+]: stop duration -/+\n" +
 			"T: toggle stop-at-ends\n" +
@@ -804,6 +909,11 @@ func drawEditorHUD(world *Engine.World) {
 		case EditorSelectionPlatform:
 			if platform, ok := world.Platforms[Editor.SelectedEntity]; ok {
 				aabb := platform.AABB
+				layerStr := "Solid"
+				if aabb.Layer == Engine.ONE_WAY_PLATFORMS {
+					layerStr = "One-Way"
+				}
+
 				timerStr := "none"
 				if platform.VelTimerDuration > 0 {
 					stopStr := ""
@@ -817,8 +927,9 @@ func drawEditorHUD(world *Engine.World) {
 					timerStr = fmt.Sprintf("%.2fs %s%s", platform.VelTimerDuration, axisName(platform.VelTimerAxis), stopStr)
 				}
 				lines += fmt.Sprintf(
-					"\n\nPlatform: pos(%.0f, %.0f) size(%.0f x %.0f)\nvel(%.0f, %.0f)  timer:%s",
+					"\n\nPlatform: pos(%.0f, %.0f) size(%.0f x %.0f)\nLayer: %s\nvel(%.0f, %.0f)  timer:%s",
 					aabb.X, aabb.Y, aabb.Width, aabb.Height,
+					layerStr,
 					platform.Velocity.X, platform.Velocity.Y,
 					timerStr,
 				)
@@ -829,6 +940,13 @@ func drawEditorHUD(world *Engine.World) {
 				lines += fmt.Sprintf(
 					"\n\nKill Trigger: pos(%.0f, %.0f) size(%.0f x %.0f)",
 					aabb.X, aabb.Y, aabb.Width, aabb.Height,
+				)
+			}
+		case EditorSelectionCheckpoint:
+			if cp, ok := world.Checkpoints[Editor.SelectedEntity]; ok {
+				lines += fmt.Sprintf(
+					"\n\nCheckpoint: pos(%.0f, %.0f)\nState: %v",
+					cp.Position.X, cp.Position.Y, cp.Activated,
 				)
 			}
 		}
