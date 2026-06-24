@@ -29,6 +29,10 @@ var neonBlueColor = color.RGBA{R: 0, G: 200, B: 255, A: 255}
 func (g *Game) Update() error {
 	dt := 1.0 / float64(ebiten.TPS())
 
+	if Project.CurrentGameState == Project.StateStartMenu {
+		return Project.MenuUpdate()
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
 		Project.Editor.Active = !Project.Editor.Active
 	}
@@ -44,6 +48,11 @@ func (g *Game) Update() error {
 	return nil
 }
 func (g *Game) Draw(screen *ebiten.Image) {
+
+	if Project.CurrentGameState == Project.StateStartMenu {
+		Project.MenuDraw(screen)
+		return
+	}
 
 	camera := world.Cameras[Project.MainCameraEntity]
 	camera.RenderTexture.Clear()
@@ -211,6 +220,8 @@ func main() {
 		Source: source,
 		Size:   8,
 	}
+
+	Project.MenuInit(source)
 
 	world.EntityInitfuncs = append(world.EntityInitfuncs,
 		Project.PlatformsInitFunc,
