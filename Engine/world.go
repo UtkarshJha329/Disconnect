@@ -7,8 +7,6 @@ import (
 type EntityInitFunc func(*World)
 type EntityUpdateFunc func(*World, float64)
 
-var WorldInstance *World
-
 type World struct {
 	Names map[Entity]*string
 
@@ -62,7 +60,6 @@ func NewWorld() *World {
 		EntitiesToDrawSorted: make([]Entity, 0),
 	}
 
-	WorldInstance = &world
 	return &world
 }
 

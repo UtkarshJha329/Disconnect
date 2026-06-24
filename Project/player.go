@@ -2,6 +2,7 @@ package Project
 
 import (
 	"Disconnect/Engine"
+	"fmt"
 	"image/color"
 	"math"
 
@@ -63,11 +64,17 @@ type Player struct {
 
 	FacingDirection int
 
+	InputReleaseLimit int
+	RemainingReleases int
+	IsFrozen          bool
+
 	playerIdleAnimationIndex      int
 	playerJumpAnimationIndex      int
 	playerRunAnimationIndex       int
 	playerDashAnimationIndex      int
 	playerWallSlideAnimationIndex int
+
+	lastTouchedCheckPointEntity *Engine.Entity
 }
 
 func (player *Player) CC() *Engine.CharacterController {
@@ -97,6 +104,40 @@ func (player *Player) ForceEndAllTimers() {
 }
 
 func (player *Player) RefreshInput() {
+
+	if player.IsFrozen {
+		player.JumpJustPressed = false
+		player.JumpJustReleased = false
+		player.DashJustPressed = false
+		player.DownJustPressed = false
+		player.DownJustReleased = false
+		player.LeftHeld = false
+		player.RightHeld = false
+		player.UpHeld = false
+		player.DownHeld = false
+		return
+	}
+
+	trackedKeys := []ebiten.Key{
+		ebiten.KeyArrowLeft,
+		ebiten.KeyArrowRight,
+		ebiten.KeyArrowUp,
+		ebiten.KeyC,
+		ebiten.KeyArrowDown,
+		ebiten.KeyX,
+	}
+
+	for _, key := range trackedKeys {
+		if inpututil.IsKeyJustReleased(key) {
+			player.RemainingReleases--
+			if player.RemainingReleases <= 0 {
+				player.RemainingReleases = 0
+				player.IsFrozen = true
+				break
+			}
+		}
+	}
+
 	player.JumpJustPressed = inpututil.IsKeyJustPressed(ebiten.KeyC)
 	player.JumpJustReleased = inpututil.IsKeyJustReleased(ebiten.KeyC)
 	player.DashJustPressed = inpututil.IsKeyJustPressed(ebiten.KeyX)
@@ -431,6 +472,7 @@ func (state *DashState) Exit(p *Player) {
 }
 
 var player *Player
+var playerRespawnTimerSystem Engine.TimerSystem
 
 func PlayerInitFunc(world *Engine.World) {
 	player = &Player{
@@ -451,6 +493,10 @@ func PlayerInitFunc(world *Engine.World) {
 		CoyoteTime:       0.15,
 		WallJumpLockTime: 0.25,
 		DashTime:         0.15,
+
+		InputReleaseLimit: 10,
+		RemainingReleases: 10,
+		IsFrozen:          false,
 	}
 
 	player.JumpBufferTimer.InitWithTimers("Jump Buffer Timer System", 4)
@@ -556,6 +602,8 @@ func PlayerInitFunc(world *Engine.World) {
 
 	player.state = &GroundedState{}
 	player.state.Enter(player)
+
+	player.lastTouchedCheckPointEntity = nil
 }
 
 func PlayerUpdateFunc(world *Engine.World, dt float64) {
@@ -577,6 +625,10 @@ func PlayerUpdateFunc(world *Engine.World, dt float64) {
 			math.Abs(world.Transforms[player.Entity].Scale.X),
 			float64(player.FacingDirection),
 		)
+
+		if player.IsFrozen {
+			player.KillPlayer()
+		}
 
 	} else {
 		player.ForceEndAllTimers()
@@ -686,4 +738,39 @@ var CelesteJumpDustConfig = Engine.ParticleEmissionConfig{
 	Gravity:           0.0,
 	Drag:              0.25,
 	TotalNumParticles: 50,
+}
+
+func (player *Player) KillPlayer() {
+	player.World.KillEntity(player.Entity)
+
+	ps := player.World.ParticleSystems[player.Entity]
+	ps.SpawnBurst(player.World, 40, &CelesteDeathConfig)
+	ps.SpawnBurst(player.World, 15, &CelesteDeathSparkConfig)
+
+	var respawnPos Engine.Vector2 = Engine.Vector2{X: 320.0, Y: 240.0}
+	var respawnWithInputAmount int = player.InputReleaseLimit
+	if player.lastTouchedCheckPointEntity != nil {
+		respawnPos = player.World.Checkpoints[*player.lastTouchedCheckPointEntity].Position
+		respawnWithInputAmount = player.World.Checkpoints[*player.lastTouchedCheckPointEntity].InputReleaseLimit
+	}
+
+	playerRespawnTimerSystem.SetTimerFromPoolWithDurationLoopAndFunc(
+		2.0,
+		false,
+		func() {
+			player.World.Transforms[player.Entity].Position = Engine.Vector3{
+				X: respawnPos.X,
+				Y: respawnPos.Y,
+				Z: player.World.Transforms[player.Entity].Position.Z,
+			}
+			player.InputReleaseLimit = respawnWithInputAmount
+			player.RemainingReleases = respawnWithInputAmount
+			player.IsFrozen = false
+			player.World.SetEntityAlive(player.Entity)
+		},
+	)
+}
+
+func GetPlayerReleaseText() string {
+	return fmt.Sprintf("%d/%d", player.RemainingReleases, player.InputReleaseLimit)
 }

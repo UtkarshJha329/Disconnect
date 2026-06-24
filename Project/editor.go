@@ -176,6 +176,7 @@ func EditorUpdateFunc(world *Engine.World, dt float64) {
 			handleTriggerResizeInput(world)
 		case EditorSelectionCheckpoint:
 			handleTriggerResizeInput(world)
+			handleCheckpointLimitInput(world)
 		}
 		handleDeleteInput(world)
 	}
@@ -250,9 +251,10 @@ func handleEditorClick(world *Engine.World, worldMouse Engine.Vector2) {
 		SetupCheckpointCallback(world.Triggers[newEntity], newEntity)
 
 		world.Checkpoints[newEntity] = &Engine.Checkpoint{
-			Entity:    newEntity,
-			Position:  Engine.Vector2{X: snappedX, Y: snappedY},
-			Activated: false,
+			Entity:            newEntity,
+			Position:          Engine.Vector2{X: snappedX, Y: snappedY},
+			Activated:         false,
+			InputReleaseLimit: 10,
 		}
 		Editor.SelectedEntity = newEntity
 		Editor.HasSelection = true
@@ -457,6 +459,29 @@ func handleSaveLoadInput(world *Engine.World, ctrlHeld bool) {
 	}
 }
 
+func handleCheckpointLimitInput(world *Engine.World) {
+	if Editor.SelectionType != EditorSelectionCheckpoint {
+		return
+	}
+
+	cp := world.Checkpoints[Editor.SelectedEntity]
+	if cp == nil {
+		return
+	}
+
+	// Use Numpad + and - to adjust the limit
+	if inpututil.IsKeyJustPressed(ebiten.KeyNumpadAdd) {
+		cp.InputReleaseLimit++
+		Editor.StatusMessage = fmt.Sprintf("Checkpoint Releases: %d", cp.InputReleaseLimit)
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyNumpadSubtract) {
+		if cp.InputReleaseLimit > 0 {
+			cp.InputReleaseLimit--
+		}
+		Editor.StatusMessage = fmt.Sprintf("Checkpoint Releases: %d", cp.InputReleaseLimit)
+	}
+}
+
 // --- serialization ---
 
 type SerializablePlatform struct {
@@ -478,6 +503,7 @@ type SerializableTrigger struct {
 type SerializableCheckpoint struct {
 	X, Y          float64
 	Width, Height float64
+	ReleaseLimit  int `json:"ReleaseLimit"`
 }
 
 type SerializableLevel struct {
@@ -519,10 +545,11 @@ func SaveLevel(path string, world *Engine.World) error {
 	for _, cp := range world.Checkpoints {
 		trigger := world.Triggers[cp.Entity]
 		checkpoints = append(checkpoints, SerializableCheckpoint{
-			X:      cp.Position.X,
-			Y:      cp.Position.Y,
-			Width:  trigger.AABB.Width,
-			Height: trigger.AABB.Height,
+			X:            cp.Position.X,
+			Y:            cp.Position.Y,
+			Width:        trigger.AABB.Width,
+			Height:       trigger.AABB.Height,
+			ReleaseLimit: cp.InputReleaseLimit,
 		})
 	}
 
@@ -586,9 +613,10 @@ func LoadLevel(path string, world *Engine.World) error {
 		SetupCheckpointCallback(world.Triggers[e], e)
 
 		world.Checkpoints[e] = &Engine.Checkpoint{
-			Entity:    e,
-			Position:  Engine.Vector2{X: scp.X, Y: scp.Y},
-			Activated: false,
+			Entity:            e,
+			Position:          Engine.Vector2{X: scp.X, Y: scp.Y},
+			Activated:         false,
+			InputReleaseLimit: scp.ReleaseLimit,
 		}
 	}
 
@@ -908,6 +936,10 @@ func drawEditorHUD(world *Engine.World) {
 			"Y: cycle timer axis (X/Y/Both)\n"
 	}
 
+	if Editor.Mode == EditorModeCheckpoint {
+		lines += "Numpad +/-: set release limit\n"
+	}
+
 	lines += "Delete: remove selected\n" +
 		"Ctrl+S save, Ctrl+L load"
 
@@ -952,8 +984,8 @@ func drawEditorHUD(world *Engine.World) {
 		case EditorSelectionCheckpoint:
 			if cp, ok := world.Checkpoints[Editor.SelectedEntity]; ok {
 				lines += fmt.Sprintf(
-					"\n\nCheckpoint: pos(%.0f, %.0f)\nState: %v",
-					cp.Position.X, cp.Position.Y, cp.Activated,
+					"\n\nCheckpoint: pos(%.0f, %.0f)\nReleases Granted: %d\nState: %v",
+					cp.Position.X, cp.Position.Y, cp.InputReleaseLimit, cp.Activated,
 				)
 			}
 		}

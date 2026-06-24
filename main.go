@@ -3,19 +3,28 @@ package main
 import (
 	"Disconnect/Engine"
 	"Disconnect/Project"
+	"bytes"
 	"cmp"
+	"embed"
 	"image/color"
 	"log"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
+
+//go:embed Assets
+var assets embed.FS
 
 type Game struct{}
 
 var world *Engine.World = Engine.NewWorld()
+
+var neonBlueFace text.Face
+var neonBlueColor = color.RGBA{R: 0, G: 200, B: 255, A: 255}
 
 func (g *Game) Update() error {
 	dt := 1.0 / float64(ebiten.TPS())
@@ -138,6 +147,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			color.RGBA{0, 0, 255, 255},
 			false,
 		)
+
+		releaseText := Project.GetPlayerReleaseText()
+
+		textWorldX := world.Transforms[e].Position.X
+		textWorldY := world.Transforms[e].Position.Y - (cc.Height / 2.0) - 20.0
+
+		textScreenX, textScreenY := cameraMatrix.Apply(textWorldX, textWorldY)
+
+		adv, _ := text.Measure(releaseText, neonBlueFace, 0)
+		drawX := textScreenX - float64(adv)/2.0
+		drawY := textScreenY
+
+		op := &text.DrawOptions{}
+		op.GeoM.Translate(drawX, drawY)
+		op.ColorScale.ScaleWithColor(neonBlueColor)
+		text.Draw(camera.RenderTexture, releaseText, neonBlueFace, op)
 	}
 
 	if Project.Editor.Active {
@@ -172,6 +197,21 @@ func main() {
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Sora Engine")
 
+	fontData, err := assets.ReadFile("Assets/Fonts/PressStart2P-Regular.ttf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	source, err := text.NewGoTextFaceSource(bytes.NewReader(fontData))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	neonBlueFace = &text.GoTextFace{
+		Source: source,
+		Size:   8,
+	}
+
 	world.EntityInitfuncs = append(world.EntityInitfuncs,
 		Project.PlatformsInitFunc,
 		Project.PlayerInitFunc,
@@ -190,6 +230,10 @@ func main() {
 
 	for _, initFunc := range world.EntityInitfuncs {
 		initFunc(world)
+	}
+
+	if err := Project.LoadLevel(Project.LevelSaveFile, world); err != nil {
+		log.Panic("Load failed: " + err.Error())
 	}
 
 	if err := ebiten.RunGame(game); err != nil {
