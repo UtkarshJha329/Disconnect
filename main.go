@@ -85,6 +85,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		collider := trigger.AABB
 		x, y := cameraMatrix.Apply(collider.X, collider.Y)
 
+		triggerColor := color.RGBA{255, 0, 0, 255}
+		if trigger.TriggerType == "DashPowerUpTrigger" || trigger.TriggerType == "WallClimbPowerUpTrigger" {
+			triggerColor = color.RGBA{0, 0, 255, 255}
+
+		}
+
 		vector.StrokeRect(
 			camera.RenderTexture,
 			float32(x),
@@ -92,7 +98,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			float32(collider.Width),
 			float32(collider.Height),
 			1,
-			color.RGBA{255, 0, 0, 255},
+			triggerColor,
 			false,
 		)
 	}
@@ -113,8 +119,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			flagFillColor = color.RGBA{R: 255, G: 255, B: 0, A: 255} // Bright solid yellow
 			flagOutlineColor = color.RGBA{R: 255, G: 255, B: 150, A: 255}
 		} else {
-			flagFillColor = color.RGBA{R: 200, G: 200, B: 0, A: 150} // Dimmer/more transparent yellow
-			flagOutlineColor = color.RGBA{R: 200, G: 200, B: 0, A: 200}
+			flagFillColor = color.RGBA{R: 100, G: 100, B: 0, A: 150} // Dimmer/more transparent yellow
+			flagOutlineColor = color.RGBA{R: 100, G: 100, B: 0, A: 200}
 		}
 
 		// --- Draw Fancy Rectangle Flag ---
@@ -243,7 +249,7 @@ func main() {
 		initFunc(world)
 	}
 
-	if err := Project.LoadLevel(Project.LevelSaveFile, world); err != nil {
+	if err := Project.LoadLevel(Project.LevelSaveFile, world, false); err != nil {
 		log.Panic("Load failed: " + err.Error())
 	}
 

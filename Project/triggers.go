@@ -14,6 +14,8 @@ func SetupCheckpointCallback(trigger *Engine.Trigger, triggerEntity Engine.Entit
 				player.InputReleaseLimit = player.World.Checkpoints[cp.Entity].InputReleaseLimit
 				player.RemainingReleases = player.World.Checkpoints[cp.Entity].InputReleaseLimit
 				player.IsFrozen = false
+
+				player.CanDash = true
 			}
 		}
 	}
@@ -28,19 +30,60 @@ func SetupKillTriggerCallback(trigger *Engine.Trigger) {
 	}
 }
 
-func TriggersInitFunc(world *Engine.World) {
-	playerRespawnTimerSystem.InitWithTimers("Player Respawn Timer System", 1)
+func SetUpDashPowerUpTriggerCallback(trigger *Engine.Trigger) {
+	trigger.TriggerType = "DashPowerUpTrigger"
+	trigger.OnCollision = func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
+		if colliderEntity == player.Entity {
+			player.PickedUpDashPowerUp = true
+		}
+		player.World.RemoveTrigger(triggerEntity)
+	}
+}
 
-	triggerEntity := world.CreateNewTriggerColliderInScene(
-		&world.Scene,
-		500.0,
-		418.0,
-		32.0,
-		32.0,
-		Engine.DEFAULT,
-		nil,
-	)
-	SetupKillTriggerCallback(world.Triggers[triggerEntity])
+func SetUpWallClimbPowerUpTriggerCallback(trigger *Engine.Trigger) {
+	trigger.TriggerType = "WallClimbPowerUpTrigger"
+	trigger.OnCollision = func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
+		if colliderEntity == player.Entity {
+			player.PickedUpWallClimbPowerUp = true
+		}
+		player.World.RemoveTrigger(triggerEntity)
+	}
+}
+
+func TriggersInitFunc(world *Engine.World) {
+
+	// // Dash Power Up Trigger.
+	// dashPowerUpTriggerEntity := world.CreateNewTriggerColliderInScene(
+	// 	&world.Scene,
+	// 	-1560,
+	// 	220,
+	// 	20.0,
+	// 	20.0,
+	// 	Engine.DEFAULT,
+	// 	func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
+	// 		if colliderEntity == player.Entity {
+	// 			player.PickedUpDashPowerUp = true
+	// 		}
+	// 	},
+	// )
+	// world.Triggers[dashPowerUpTriggerEntity].TriggerType = "DashPowerUpTrigger"
+
+	// // Wall Climb Power Up Trigger.
+	// wallClimbPowerUpTriggerEntity := world.CreateNewTriggerColliderInScene(
+	// 	&world.Scene,
+	// 	2900.0,
+	// 	400.0,
+	// 	20.0,
+	// 	20.0,
+	// 	Engine.DEFAULT,
+	// 	func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
+	// 		if colliderEntity == player.Entity {
+	// 			player.PickedUpWallClimbPowerUp = true
+	// 		}
+	// 	},
+	// )
+	// world.Triggers[wallClimbPowerUpTriggerEntity].TriggerType = "WallClimbPowerUpTrigger"
+
 }
 
 func TriggersUpdateFunc(world *Engine.World, dt float64) {

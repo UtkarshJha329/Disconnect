@@ -449,7 +449,7 @@ func handleSaveLoadInput(world *Engine.World, ctrlHeld bool) {
 	}
 
 	if ctrlHeld && inpututil.IsKeyJustPressed(ebiten.KeyL) {
-		if err := LoadLevel(LevelSaveFile, world); err != nil {
+		if err := LoadLevel(LevelSaveFile, world, true); err != nil {
 			Editor.StatusMessage = "Load failed: " + err.Error()
 		} else {
 			Editor.HasSelection = false
@@ -561,7 +561,7 @@ func SaveLevel(path string, world *Engine.World) error {
 	return os.WriteFile(path, data, 0644)
 }
 
-func LoadLevel(path string, world *Engine.World) error {
+func LoadLevel(path string, world *Engine.World, clearLoad bool) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -572,12 +572,15 @@ func LoadLevel(path string, world *Engine.World) error {
 		return err
 	}
 
-	for e := range world.Platforms {
-		world.RemovePlatform(e)
+	if clearLoad {
+		for e := range world.Platforms {
+			world.RemovePlatform(e)
+		}
+		for e := range world.Triggers {
+			world.RemoveTrigger(e)
+		}
 	}
-	for e := range world.Triggers {
-		world.RemoveTrigger(e)
-	}
+
 	world.Checkpoints = make(map[Engine.Entity]*Engine.Checkpoint)
 
 	for _, p := range level.Platforms {
@@ -605,6 +608,10 @@ func LoadLevel(path string, world *Engine.World) error {
 		switch t.TriggerType {
 		case "kill":
 			SetupKillTriggerCallback(trigger)
+		case "DashPowerUpTrigger":
+			SetUpDashPowerUpTriggerCallback(trigger)
+		case "WallClimbPowerUpTrigger":
+			SetUpWallClimbPowerUpTriggerCallback(trigger)
 		}
 	}
 
@@ -669,18 +676,42 @@ func drawEditorGrid(camera *Engine.Camera, cameraMatrix *ebiten.GeoM) {
 	minY := math.Min(topLeftY, bottomRightY)
 	maxY := math.Max(topLeftY, bottomRightY)
 
+	// 1. Draw the minor 20x20 placement grid
 	gridColor := color.RGBA{R: 20, G: 20, B: 20, A: 35}
-
 	for x := SnapToGrid(minX); x <= maxX; x += EditorGridSize {
 		sx0, sy0 := cameraMatrix.Apply(x, minY)
 		sx1, sy1 := cameraMatrix.Apply(x, maxY)
 		vector.StrokeLine(camera.RenderTexture, float32(sx0), float32(sy0), float32(sx1), float32(sy1), 1, gridColor, false)
 	}
-
 	for y := SnapToGrid(minY); y <= maxY; y += EditorGridSize {
 		sx0, sy0 := cameraMatrix.Apply(minX, y)
 		sx1, sy1 := cameraMatrix.Apply(maxX, y)
 		vector.StrokeLine(camera.RenderTexture, float32(sx0), float32(sy0), float32(sx1), float32(sy1), 1, gridColor, false)
+	}
+
+	// 2. Draw the 640x480 "Fake Room" boundaries
+	// A subtle blue/purple color so it stands out from the dark gray grid
+	roomColor := color.RGBA{R: 60, G: 60, B: 120, A: 120}
+	roomWidth := 640.0
+	roomHeight := 480.0
+
+	// Find the first room boundary line that is visible on screen
+	startRoomX := math.Floor(minX/roomWidth) * roomWidth
+	startRoomY := math.Floor(minY/roomHeight) * roomHeight
+
+	// Draw vertical room boundaries (every 640 pixels)
+	for x := startRoomX; x <= maxX; x += roomWidth {
+		sx0, sy0 := cameraMatrix.Apply(x, minY)
+		sx1, sy1 := cameraMatrix.Apply(x, maxY)
+		// Width is 2 to make it slightly thicker than the placement grid
+		vector.StrokeLine(camera.RenderTexture, float32(sx0), float32(sy0), float32(sx1), float32(sy1), 2, roomColor, false)
+	}
+
+	// Draw horizontal room boundaries (every 480 pixels)
+	for y := startRoomY; y <= maxY; y += roomHeight {
+		sx0, sy0 := cameraMatrix.Apply(minX, y)
+		sx1, sy1 := cameraMatrix.Apply(maxX, y)
+		vector.StrokeLine(camera.RenderTexture, float32(sx0), float32(sy0), float32(sx1), float32(sy1), 2, roomColor, false)
 	}
 }
 

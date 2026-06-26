@@ -32,16 +32,19 @@ type Player struct {
 	CoyoteTime  float64
 	CoyoteTimer Engine.TimerSystem
 
-	WallSlideSpeed    float64
-	WallClimbSpeed    float64
-	WallJumpSpeedX    float64
-	WallJumpSpeedY    float64
-	WallJumpLockTime  float64
-	WallJumpLockTimer Engine.TimerSystem
+	PickedUpWallClimbPowerUp bool
+	WallSlideSpeed           float64
+	WallClimbSpeed           float64
+	WallJumpSpeedX           float64
+	WallJumpSpeedY           float64
+	WallJumpLockTime         float64
+	WallJumpLockTimer        Engine.TimerSystem
 
-	DashSpeed float64
-	DashTime  float64
-	DashTimer Engine.TimerSystem
+	PickedUpDashPowerUp bool
+	CanDash             bool
+	DashSpeed           float64
+	DashTime            float64
+	DashTimer           Engine.TimerSystem
 
 	PlatformMomentumDecay Engine.Vector2
 
@@ -175,7 +178,10 @@ func (player *Player) HandleOneWayPlatform() {
 }
 
 func (player *Player) MustStartDash() bool {
-	return player.DashJustPressed && !player.DashTimer.TimerSystemPoolHasRunningTimers()
+	return player.PickedUpDashPowerUp &&
+		player.CanDash &&
+		player.DashJustPressed &&
+		!player.DashTimer.TimerSystemPoolHasRunningTimers()
 }
 
 type GroundedState struct{}
@@ -190,6 +196,8 @@ func (state *GroundedState) Enter(player *Player) {
 func (state *GroundedState) Update(player *Player, dt float64) {
 	cc := player.CC()
 	player.ApplyHorizontalInput()
+
+	player.CanDash = true
 
 	if cc.Velocity.X == 0 {
 		playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
@@ -292,7 +300,10 @@ func (state *AirborneState) PostUpdate(player *Player) {
 		return
 	}
 
-	if (player.TouchingWallLeft || player.TouchingWallRight) && cc.Velocity.Y > 0 {
+	if player.PickedUpWallClimbPowerUp &&
+		(player.TouchingWallLeft || player.TouchingWallRight) &&
+		cc.Velocity.Y > 0 {
+
 		player.ChangeState(&WallSlideState{})
 	}
 }
@@ -434,7 +445,9 @@ func (state *DashState) Enter(player *Player) {
 }
 
 func (state *DashState) Update(player *Player, dt float64) {
-	// 1. Spawn the initial impact burst ONCE
+
+	player.CanDash = false
+
 	if !state.hasSpawnedBurst {
 		ps := player.World.ParticleSystems[player.Entity]
 		ps.SpawnBurst(player.World, 15, &CelesteDashBurstConfig)
@@ -444,8 +457,6 @@ func (state *DashState) Update(player *Player, dt float64) {
 	playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
 	playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerDashAnimationIndex)
 
-	// 2. Spawn the after-image trail EVERY frame
-	// We only need 1 or 2 particles per frame to make a solid trail
 	ps := player.World.ParticleSystems[player.Entity]
 	ps.SpawnBurst(player.World, 2, &CelesteDashTrailConfig)
 }
@@ -460,7 +471,7 @@ func (state *DashState) PostUpdate(player *Player) {
 	switch {
 	case cc.Grounded:
 		player.ChangeState(&GroundedState{})
-	case (player.TouchingWallLeft || player.TouchingWallRight) && cc.Velocity.Y > 0:
+	case player.PickedUpWallClimbPowerUp && (player.TouchingWallLeft || player.TouchingWallRight) && cc.Velocity.Y > 0:
 		player.ChangeState(&WallSlideState{})
 	default:
 		player.ChangeState(&AirborneState{})
@@ -475,17 +486,25 @@ var player *Player
 var playerRespawnTimerSystem Engine.TimerSystem
 
 func PlayerInitFunc(world *Engine.World) {
+
+	playerRespawnTimerSystem.InitWithTimers("Player Respawn Timer System", 1)
+
 	player = &Player{
 		World: world,
 
-		Gravity:        1200,
-		MoveSpeed:      500,
-		JumpSpeed:      500,
-		WallSlideSpeed: 10.0,
-		WallClimbSpeed: 100.0,
-		WallJumpSpeedX: 400.0,
-		WallJumpSpeedY: 600.0,
-		DashSpeed:      900.0,
+		Gravity:   1200,
+		MoveSpeed: 500,
+		JumpSpeed: 500,
+
+		PickedUpWallClimbPowerUp: false,
+		WallSlideSpeed:           10.0,
+		WallClimbSpeed:           100.0,
+		WallJumpSpeedX:           400.0,
+		WallJumpSpeedY:           600.0,
+
+		PickedUpDashPowerUp: false,
+		DashSpeed:           900.0,
+		CanDash:             false,
 
 		PlatformMomentumDecay: Engine.Vector2{X: 0.95, Y: 0.95},
 
