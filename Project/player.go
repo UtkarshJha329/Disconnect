@@ -759,6 +759,40 @@ var CelesteJumpDustConfig = Engine.ParticleEmissionConfig{
 	TotalNumParticles: 50,
 }
 
+// CelesteDeathConfig is the main red shatter effect
+var PowerUpConfig = Engine.ParticleEmissionConfig{
+	ConfigName:        "Power Up",
+	EmissionRadius:    4.0,
+	SpeedMin:          150.0,
+	SpeedMax:          350.0,
+	LifeMin:           0.6,
+	LifeMax:           1.2,
+	StartSize:         6.0,
+	EndSize:           0.0,
+	StartColor:        color.RGBA{R: 255, G: 255, B: 0, A: 255},
+	EndColor:          color.RGBA{R: 255, G: 255, B: 0, A: 0},
+	Gravity:           0.0,
+	Drag:              0.08,
+	TotalNumParticles: 50,
+}
+
+// CelesteDeathSparkConfig is a subtle white/yellow flash for extra impact
+var PowerUpSparkConfig = Engine.ParticleEmissionConfig{
+	ConfigName:        "Power Up Spark",
+	EmissionRadius:    2.0,
+	SpeedMin:          250.0,
+	SpeedMax:          500.0,
+	LifeMin:           0.2,
+	LifeMax:           0.4,
+	StartSize:         4.0,
+	EndSize:           0.0,
+	StartColor:        color.RGBA{R: 255, G: 255, B: 200, A: 255},
+	EndColor:          color.RGBA{R: 255, G: 255, B: 200, A: 0},
+	Gravity:           0.0,
+	Drag:              0.15,
+	TotalNumParticles: 50,
+}
+
 func (player *Player) KillPlayer() {
 	player.World.KillEntity(player.Entity)
 
@@ -788,6 +822,14 @@ func (player *Player) KillPlayer() {
 			player.World.SetEntityAlive(player.Entity)
 		},
 	)
+}
+
+func (player *Player) SpawnPlayerPowerPickUpParticles() {
+
+	ps := player.World.ParticleSystems[player.Entity]
+	ps.SpawnBurst(player.World, 40, &PowerUpConfig)
+	ps.SpawnBurst(player.World, 15, &PowerUpSparkConfig)
+
 }
 
 func GetPlayerReleaseText() string {

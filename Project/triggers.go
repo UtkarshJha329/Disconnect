@@ -35,8 +35,9 @@ func SetUpDashPowerUpTriggerCallback(trigger *Engine.Trigger) {
 	trigger.OnCollision = func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
 		if colliderEntity == player.Entity {
 			player.PickedUpDashPowerUp = true
+			player.SpawnPlayerPowerPickUpParticles()
+			player.World.RemoveTrigger(triggerEntity)
 		}
-		player.World.RemoveTrigger(triggerEntity)
 	}
 }
 
@@ -45,8 +46,9 @@ func SetUpWallClimbPowerUpTriggerCallback(trigger *Engine.Trigger) {
 	trigger.OnCollision = func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
 		if colliderEntity == player.Entity {
 			player.PickedUpWallClimbPowerUp = true
+			player.SpawnPlayerPowerPickUpParticles()
+			player.World.RemoveTrigger(triggerEntity)
 		}
-		player.World.RemoveTrigger(triggerEntity)
 	}
 }
 

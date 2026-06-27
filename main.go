@@ -6,9 +6,11 @@ import (
 	"bytes"
 	"cmp"
 	"embed"
+	"errors"
 	"image/color"
 	"log"
 	"slices"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -33,6 +35,18 @@ func (g *Game) Update() error {
 		return Project.MenuUpdate()
 	}
 
+	if Project.CurrentGameState == Project.StateGameComplete {
+		err := Project.VictoryUpdate()
+		if err != nil {
+			if errors.Is(err, Project.ErrRestartGame) {
+				initGameWorld() // Reset everything
+				// Go back to menu instead of instantly playing so they can see the title
+				Project.CurrentGameState = Project.StateStartMenu
+			}
+		}
+		return nil
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
 		Project.Editor.Active = !Project.Editor.Active
 	}
@@ -43,14 +57,26 @@ func (g *Game) Update() error {
 		for _, updateFunc := range world.EntityUpdateFuncs {
 			updateFunc(world, dt)
 		}
+
+		if Project.CheckGameComplete(world) {
+			Project.GameCompletionTime = time.Since(Project.GameStartTime)
+			Project.CurrentGameState = Project.StateGameComplete
+			return nil
+		}
 	}
 
 	return nil
 }
+
 func (g *Game) Draw(screen *ebiten.Image) {
 
 	if Project.CurrentGameState == Project.StateStartMenu {
 		Project.MenuDraw(screen)
+		return
+	}
+
+	if Project.CurrentGameState == Project.StateGameComplete {
+		Project.VictoryDraw(screen)
 		return
 	}
 
@@ -87,7 +113,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		triggerColor := color.RGBA{255, 0, 0, 255}
 		if trigger.TriggerType == "DashPowerUpTrigger" || trigger.TriggerType == "WallClimbPowerUpTrigger" {
-			triggerColor = color.RGBA{0, 0, 255, 255}
+			triggerColor = color.RGBA{255, 255, 0, 255}
 
 		}
 
@@ -201,33 +227,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, camera := range cameras {
 		screen.DrawImage(camera.Camera.RenderTexture, &op)
 	}
+
+	Project.DrawMinimap(screen, world)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return 640, 480
 }
 
-func main() {
-	game := &Game{}
-	ebiten.SetWindowSize(640, 480)
-	ebiten.SetWindowTitle("Sora Engine")
-
-	fontData, err := assets.ReadFile("Assets/Fonts/PressStart2P-Regular.ttf")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	source, err := text.NewGoTextFaceSource(bytes.NewReader(fontData))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	neonBlueFace = &text.GoTextFace{
-		Source: source,
-		Size:   8,
-	}
-
-	Project.MenuInit(source)
+func initGameWorld() {
+	world = Engine.NewWorld()
 
 	world.EntityInitfuncs = append(world.EntityInitfuncs,
 		Project.PlatformsInitFunc,
@@ -252,6 +261,31 @@ func main() {
 	if err := Project.LoadLevel(Project.LevelSaveFile, world, false); err != nil {
 		log.Panic("Load failed: " + err.Error())
 	}
+}
+
+func main() {
+	game := &Game{}
+	ebiten.SetWindowSize(640, 480)
+	ebiten.SetWindowTitle("Sora Engine")
+
+	fontData, err := assets.ReadFile("Assets/Fonts/PressStart2P-Regular.ttf")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	source, err := text.NewGoTextFaceSource(bytes.NewReader(fontData))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	neonBlueFace = &text.GoTextFace{
+		Source: source,
+		Size:   8,
+	}
+
+	Project.MenuInit(source)
+
+	initGameWorld()
 
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
