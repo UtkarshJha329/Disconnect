@@ -42,6 +42,7 @@ func MenuUpdate() error {
 		inpututil.IsKeyJustPressed(ebiten.KeyZ) {
 		CurrentGameState = StatePlaying
 		GameStartTime = time.Now()
+		PlaySoundEffect("Assets/Sfx/Menuselect.wav")
 	}
 	return nil
 }

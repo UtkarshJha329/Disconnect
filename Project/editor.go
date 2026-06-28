@@ -562,7 +562,7 @@ func SaveLevel(path string, world *Engine.World) error {
 }
 
 func LoadLevel(path string, world *Engine.World, clearLoad bool) error {
-	data, err := os.ReadFile(path)
+	data, err := Assets.ReadFile(path)
 	if err != nil {
 		return err
 	}

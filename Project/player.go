@@ -223,6 +223,9 @@ func (state *GroundedState) Update(player *Player, dt float64) {
 
 		player.JumpBufferTimer.ForceEndAllTimersForNextUpdate()
 		player.ChangeState(&AirborneState{})
+
+		PlaySoundEffect("Assets/Sfx/Jump.wav")
+
 		return
 	}
 
@@ -271,6 +274,7 @@ func (state *AirborneState) Update(player *Player, dt float64) {
 	if player.JumpJustPressed && player.CoyoteTimer.TimerSystemPoolHasRunningTimers() {
 		cc.Velocity.Y = -cc.JumpSpeed
 		player.CoyoteTimer.ForceEndAllTimersForNextUpdate()
+		PlaySoundEffect("Assets/Sfx/Jump.wav")
 	}
 
 	if player.JumpJustReleased && cc.Velocity.Y < 0 {
@@ -413,6 +417,9 @@ type DashState struct {
 func (state *DashState) Name() string { return "Dash" }
 
 func (state *DashState) Enter(player *Player) {
+
+	PlaySoundEffect("Assets/Sfx/Dash.wav")
+
 	cc := player.CC()
 	state.gravityBackup = cc.Gravity
 	cc.Gravity = 0.0
@@ -525,7 +532,8 @@ func PlayerInitFunc(world *Engine.World) {
 
 	screenWidth, screenHeight := ebiten.WindowSize()
 
-	player.Entity = world.CreateSpriteFromFileInScene(&world.Scene, "Assets/player/idle/player_idle_sheet.png")
+	// player.Entity = world.CreateSpriteFromFileInScene(&world.Scene, "Assets/player/idle/player_idle_sheet.png")
+	player.Entity = world.CreateEntityInScene(&world.Scene)
 	world.Transforms[player.Entity].Scale = Engine.Vector2{X: 2.0, Y: 2.0}
 	world.Transforms[player.Entity].Position = Engine.Vector3{
 		X: float64(screenWidth) / 2.0,
@@ -609,16 +617,6 @@ func PlayerInitFunc(world *Engine.World) {
 		Owner: player.Entity,
 	}
 	world.ParticleSystems[player.Entity].InitParticleSystem("Player Death Particles", 1000)
-
-	gunEntity := world.CreateSpriteFromFileInSceneWithParentEntity(&world.Scene, "Assets/gun.png", player.Entity)
-	world.Transforms[gunEntity].Scale = Engine.Vector2{X: 1.0, Y: 1.0}
-	world.Transforms[gunEntity].Position = Engine.Vector3{X: 6.0, Y: 0.0, Z: 200}
-
-	gunSize := world.Sprites[gunEntity].Tex.Bounds().Size()
-	world.Transforms[gunEntity].Pivot = Engine.Vector2{
-		X: float64(gunSize.X) / 2.0,
-		Y: float64(gunSize.Y) / 2.0,
-	}
 
 	player.state = &GroundedState{}
 	player.state.Enter(player)
@@ -795,6 +793,13 @@ var PowerUpSparkConfig = Engine.ParticleEmissionConfig{
 }
 
 func (player *Player) KillPlayer() {
+
+	if !player.World.Alive[player.Entity] {
+		return
+	}
+
+	PlaySoundEffect("Assets/Sfx/Hit.wav")
+
 	player.World.KillEntity(player.Entity)
 
 	ps := player.World.ParticleSystems[player.Entity]

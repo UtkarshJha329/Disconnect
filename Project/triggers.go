@@ -9,6 +9,11 @@ func SetupCheckpointCallback(trigger *Engine.Trigger, triggerEntity Engine.Entit
 	trigger.OnCollision = func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
 		if colliderEntity == player.Entity {
 			if cp, exists := player.World.Checkpoints[triggerEntity]; exists {
+
+				if cp.Activated == false {
+					PlaySoundEffect("Assets/Sfx/Checkpoint.wav")
+				}
+
 				cp.Activated = true
 				player.lastTouchedCheckPointEntity = &cp.Entity
 				player.InputReleaseLimit = player.World.Checkpoints[cp.Entity].InputReleaseLimit
@@ -34,6 +39,7 @@ func SetUpDashPowerUpTriggerCallback(trigger *Engine.Trigger) {
 	trigger.TriggerType = "DashPowerUpTrigger"
 	trigger.OnCollision = func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
 		if colliderEntity == player.Entity {
+			PlaySoundEffect("Assets/Sfx/PowerUp.wav")
 			player.PickedUpDashPowerUp = true
 			player.SpawnPlayerPowerPickUpParticles()
 			player.World.RemoveTrigger(triggerEntity)
@@ -45,6 +51,7 @@ func SetUpWallClimbPowerUpTriggerCallback(trigger *Engine.Trigger) {
 	trigger.TriggerType = "WallClimbPowerUpTrigger"
 	trigger.OnCollision = func(triggerEntity, colliderEntity Engine.Entity, trigger *Engine.Trigger) {
 		if colliderEntity == player.Entity {
+			PlaySoundEffect("Assets/Sfx/PowerUp.wav")
 			player.PickedUpWallClimbPowerUp = true
 			player.SpawnPlayerPowerPickUpParticles()
 			player.World.RemoveTrigger(triggerEntity)

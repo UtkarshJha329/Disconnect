@@ -5,7 +5,6 @@ import (
 	"Disconnect/Project"
 	"bytes"
 	"cmp"
-	"embed"
 	"errors"
 	"image/color"
 	"log"
@@ -13,13 +12,11 @@ import (
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
-
-//go:embed Assets
-var assets embed.FS
 
 type Game struct{}
 
@@ -39,8 +36,8 @@ func (g *Game) Update() error {
 		err := Project.VictoryUpdate()
 		if err != nil {
 			if errors.Is(err, Project.ErrRestartGame) {
-				initGameWorld() // Reset everything
-				// Go back to menu instead of instantly playing so they can see the title
+				Project.PlaySoundEffect("Assets/Sfx/Menuselect.wav")
+				initGameWorld()
 				Project.CurrentGameState = Project.StateStartMenu
 			}
 		}
@@ -243,6 +240,7 @@ func initGameWorld() {
 		Project.PlayerInitFunc,
 		Project.MainCameraInitFunc,
 		Project.TriggersInitFunc,
+		Project.SFXInitFunc,
 	)
 
 	world.EntityUpdateFuncs = append(world.EntityUpdateFuncs,
@@ -268,7 +266,9 @@ func main() {
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Sora Engine")
 
-	fontData, err := assets.ReadFile("Assets/Fonts/PressStart2P-Regular.ttf")
+	Project.AudioContext = audio.NewContext(Project.SampleRate)
+
+	fontData, err := Project.Assets.ReadFile("Assets/Fonts/PressStart2P-Regular.ttf")
 	if err != nil {
 		log.Fatal(err)
 	}
