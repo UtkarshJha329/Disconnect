@@ -71,11 +71,11 @@ type Player struct {
 	RemainingReleases int
 	IsFrozen          bool
 
-	playerIdleAnimationIndex      int
-	playerJumpAnimationIndex      int
-	playerRunAnimationIndex       int
-	playerDashAnimationIndex      int
-	playerWallSlideAnimationIndex int
+	// playerIdleAnimationIndex      int
+	// playerJumpAnimationIndex      int
+	// playerRunAnimationIndex       int
+	// playerDashAnimationIndex      int
+	// playerWallSlideAnimationIndex int
 
 	lastTouchedCheckPointEntity *Engine.Entity
 }
@@ -199,13 +199,13 @@ func (state *GroundedState) Update(player *Player, dt float64) {
 
 	player.CanDash = true
 
-	if cc.Velocity.X == 0 {
-		playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
-		playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerIdleAnimationIndex)
-	} else {
-		playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
-		playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerRunAnimationIndex)
-	}
+	// if cc.Velocity.X == 0 {
+	// 	playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+	// 	playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerIdleAnimationIndex)
+	// } else {
+	// 	playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+	// 	playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerRunAnimationIndex)
+	// }
 
 	if player.JumpJustPressed && !player.JumpBufferTimer.IsTimerSystemPoolFilled() {
 		player.JumpBufferTimer.SetTimerFromPoolWithDurationLoopAndFunc(
@@ -259,8 +259,8 @@ func (state *AirborneState) Update(player *Player, dt float64) {
 	cc := player.CC()
 	player.ApplyHorizontalInput()
 
-	playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
-	playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerJumpAnimationIndex)
+	// playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+	// playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerJumpAnimationIndex)
 
 	if player.JumpJustPressed && !player.JumpBufferTimer.IsTimerSystemPoolFilled() {
 		player.JumpBufferTimer.SetTimerFromPoolWithDurationLoopAndFunc(
@@ -321,8 +321,8 @@ func (state *WallSlideState) Update(player *Player, dt float64) {
 	cc := player.CC()
 	player.ApplyHorizontalInput()
 
-	playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
-	playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerWallSlideAnimationIndex)
+	// playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+	// playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerWallSlideAnimationIndex)
 
 	if player.UpHeld {
 		cc.Velocity.Y = -player.WallClimbSpeed
@@ -454,8 +454,8 @@ func (state *DashState) Update(player *Player, dt float64) {
 		state.hasSpawnedBurst = true
 	}
 
-	playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
-	playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerDashAnimationIndex)
+	// playerAnimatedSprite := player.World.AnimatedSprites[player.Entity]
+	// playerAnimatedSprite.ChangeCurrentAnimationToAnimationIndex(player.playerDashAnimationIndex)
 
 	ps := player.World.ParticleSystems[player.Entity]
 	ps.SpawnBurst(player.World, 2, &CelesteDashTrailConfig)
@@ -533,56 +533,57 @@ func PlayerInitFunc(world *Engine.World) {
 		Z: 100,
 	}
 
-	world.AnimatedSprites[player.Entity] = &Engine.AnimatedSprite{
-		CurAnimationIndex:  0,
-		TotalNumAnimations: 0,
-		Animations:         make(map[int]*Engine.Animation),
-	}
+	// world.AnimatedSprites[player.Entity] = &Engine.AnimatedSprite{
+	// 	CurAnimationIndex:  0,
+	// 	TotalNumAnimations: 0,
+	// 	Animations:         make(map[int]*Engine.Animation),
+	// }
 
-	playerAnimatedSprite := world.AnimatedSprites[player.Entity]
-	player.playerIdleAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
-		"Assets/player/idle/player_idle_sheet.png",
-		22,
-		Engine.Vector2{X: 14, Y: 18},
-		true,
-		2.20,
-	)
+	// playerAnimatedSprite := world.AnimatedSprites[player.Entity]
+	// player.playerIdleAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+	// 	"Assets/player/idle/player_idle_sheet.png",
+	// 	22,
+	// 	Engine.Vector2{X: 14, Y: 18},
+	// 	true,
+	// 	2.20,
+	// )
 
-	player.playerRunAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
-		"Assets/player/run/player_run_sheet.png",
-		8,
-		Engine.Vector2{X: 14, Y: 18},
-		true,
-		0.8,
-	)
+	// player.playerRunAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+	// 	"Assets/player/run/player_run_sheet.png",
+	// 	8,
+	// 	Engine.Vector2{X: 14, Y: 18},
+	// 	true,
+	// 	0.8,
+	// )
 
-	player.playerJumpAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
-		"Assets/player/jump/0.png",
-		1,
-		Engine.Vector2{X: 14, Y: 18},
-		true,
-		1000.0,
-	)
+	// player.playerJumpAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+	// 	"Assets/player/jump/0.png",
+	// 	1,
+	// 	Engine.Vector2{X: 14, Y: 18},
+	// 	true,
+	// 	1000.0,
+	// )
 
-	player.playerDashAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
-		"Assets/player/slide/0.png",
-		1,
-		Engine.Vector2{X: 14, Y: 18},
-		true,
-		1000.0,
-	)
+	// player.playerDashAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+	// 	"Assets/player/slide/0.png",
+	// 	1,
+	// 	Engine.Vector2{X: 14, Y: 18},
+	// 	true,
+	// 	1000.0,
+	// )
 
-	player.playerWallSlideAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
-		"Assets/player/wall_slide/0.png",
-		1,
-		Engine.Vector2{X: 14, Y: 18},
-		true,
-		1000.0,
-	)
+	// player.playerWallSlideAnimationIndex = playerAnimatedSprite.CreateNewAnimation(
+	// 	"Assets/player/wall_slide/0.png",
+	// 	1,
+	// 	Engine.Vector2{X: 14, Y: 18},
+	// 	true,
+	// 	1000.0,
+	// )
 
 	// playerAnimatedSprite.CurAnimationIndex = player.playerIdleAnimationIndex
 
-	playerImageSize := playerAnimatedSprite.Animations[player.playerIdleAnimationIndex].FrameSize
+	// playerImageSize := playerAnimatedSprite.Animations[player.playerIdleAnimationIndex].FrameSize
+	playerImageSize := Engine.Vector2{X: 10.0, Y: 10.0}
 	world.Transforms[player.Entity].Pivot = Engine.Vector2{
 		X: float64(playerImageSize.X) / 2.0,
 		Y: float64(playerImageSize.Y) / 2.0,
@@ -592,7 +593,7 @@ func PlayerInitFunc(world *Engine.World) {
 	physicsHeight := float64(playerImageSize.Y) * world.Transforms[player.Entity].Scale.Y
 
 	world.CharacterControllers[player.Entity] = &Engine.CharacterController{
-		Width:                     physicsWidth / 1.50,
+		Width:                     physicsWidth,
 		Height:                    physicsHeight,
 		Gravity:                   player.Gravity,
 		MoveSpeed:                 player.MoveSpeed,
