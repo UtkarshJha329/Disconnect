@@ -108,7 +108,7 @@ func MenuDraw(screen *ebiten.Image) {
 	promptTextDrawOption.ColorScale.ScaleWithColor(currentPromptColor)
 	text.Draw(screen, promptText, bodyFace, &promptTextDrawOption)
 
-	hintText := "Arrow Keys: Move | C: Jump | X: Dash | Tab: Editor"
+	hintText := "Arrow Keys: Move | C: Jump | X: Dash"
 	hintAdv, _ := text.Measure(hintText, bodyFace, 0)
 	hintX := (640 - float64(hintAdv)) / 2.0
 	hintY := 420.0

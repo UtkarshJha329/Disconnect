@@ -13,7 +13,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
@@ -44,9 +43,9 @@ func (g *Game) Update() error {
 		return nil
 	}
 
-	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
-		Project.Editor.Active = !Project.Editor.Active
-	}
+	// if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+	// 	Project.Editor.Active = !Project.Editor.Active
+	// }
 
 	if Project.Editor.Active {
 		Project.EditorUpdateFunc(world, dt)
